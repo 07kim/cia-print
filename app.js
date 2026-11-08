@@ -42,7 +42,7 @@ function resetToLock() {
   window.clearInterval(resetTimer);
   token = "";
   ui.password.value = "";
-  ui.authMessage.textContent = "英数字で入力してください";
+  ui.authMessage.textContent = "";
   ui.authMessage.className = "form-message";
   ui.form.classList.remove("is-error");
   ui.printButton.disabled = false;
@@ -102,13 +102,13 @@ ui.form.addEventListener("submit", async (event) => {
 ui.password.addEventListener("input", () => {
   ui.form.classList.remove("is-error");
   ui.authMessage.className = "form-message";
-  ui.authMessage.textContent = "英数字で入力してください";
+  ui.authMessage.textContent = "";
 });
 
 ui.printButton.addEventListener("click", async () => {
   if (!token || ui.printButton.disabled) return;
   ui.printButton.disabled = true;
-  showResult("sending", "SENDING", "印刷データを送信中", "Macを経由してプリンターへ送信しています。");
+  showResult("sending", "SENDING", "送信中", "プリンターへ送信しています。");
   try {
     const result = await request("/api/print", {
       method: "POST",
@@ -116,7 +116,7 @@ ui.printButton.addEventListener("click", async () => {
     });
     token = "";
     window.setTimeout(() => {
-      showResult("success", "ACCEPTED", "印刷を受け付けました", "用紙が出てくるまで、そのままお待ちください。");
+      showResult("success", "ACCEPTED", "受付完了", "そのままお待ちください。");
       ui.action.hidden = false;
       beginResetCountdown();
     }, 850);

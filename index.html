@@ -3,52 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f7f7f5">
-  <title>CIA 資料印刷</title>
+  <meta name="theme-color" content="#ffffff">
+  <title>CIA</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <main class="terminal">
-    <header class="topbar">
-      <div class="brand"><span class="brand__mark" aria-hidden="true">CIA</span><span><strong>CIA Internet Co.</strong><small>資料印刷</small></span></div>
-      <div class="network"><span class="material-symbols-rounded" aria-hidden="true">wifi</span><span id="connection-label">Mac接続を確認中</span></div>
-    </header>
-    <section class="stage" id="lock-screen">
-      <div class="stage__intro">
-        <span class="hero-icon material-symbols-rounded" aria-hidden="true">lock</span>
-        <p class="kicker">DOCUMENT ACCESS</p><h1>資料を印刷する</h1>
-        <p class="lead">取得したパスワードを入力してください。認証後に印刷できます。</p>
-        <p class="print-summary"><span>A4</span><span>1部</span><span>固定資料</span></p>
-      </div>
+    <span class="visually-hidden" id="connection-label" aria-live="polite">Mac接続を確認中</span>
+
+    <section class="stage" id="lock-screen" aria-label="パスワード認証">
+      <span class="hero-icon material-symbols-rounded" aria-hidden="true">lock</span>
       <form class="auth-panel" id="auth-form">
-        <label for="password">パスワード</label>
-        <input id="password" name="password" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="auth-message">
-        <p class="form-message" id="auth-message" aria-live="polite">英数字で入力してください</p>
-        <button type="submit"><span class="material-symbols-rounded" aria-hidden="true">lock</span><span>認証する</span></button>
+        <label class="visually-hidden" for="password">パスワード</label>
+        <input id="password" name="password" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="auth-message" placeholder="パスワード">
+        <p class="form-message" id="auth-message" aria-live="polite"></p>
+        <button type="submit" aria-label="認証する"><span class="material-symbols-rounded" aria-hidden="true">check_circle</span></button>
       </form>
     </section>
-    <section class="stage release-stage" id="release-screen" hidden>
-      <div class="stage__intro">
-        <span class="hero-icon success material-symbols-rounded" aria-hidden="true">check_circle</span>
-        <p class="kicker success-text">ACCESS GRANTED</p><h1>印刷できます</h1>
-        <p class="lead">下のボタンを1回押してください。用紙や部数を選ぶ必要はありません。</p>
-      </div>
-      <div class="release-panel">
-        <div class="document-row"><span class="material-symbols-rounded document-symbol" aria-hidden="true">description</span><div class="release-card__copy"><small>印刷する資料</small><strong>調査資料</strong><span>A4・1部</span></div></div>
-        <button class="print-button" id="print-button" type="button"><span class="material-symbols-rounded" aria-hidden="true">print</span><span>印刷する</span></button>
-        <p class="helper">ボタンを押すと、登録済みのプリンターから出力されます。</p>
-      </div>
+
+    <section class="stage release-stage" id="release-screen" hidden aria-label="印刷">
+      <span class="hero-icon success material-symbols-rounded" aria-hidden="true">description</span>
+      <button class="print-button" id="print-button" type="button"><span class="material-symbols-rounded" aria-hidden="true">print</span><span>印刷</span></button>
     </section>
+
     <section class="result-layer" id="result-layer" hidden aria-live="assertive">
       <div class="result-card" id="result-card">
         <div class="result-symbol" id="result-symbol" aria-hidden="true"><span class="material-symbols-rounded">print</span></div>
-        <p class="kicker" id="result-kicker">SENDING</p><h2 id="result-title">印刷データを送信中</h2><p id="result-detail">そのままお待ちください。</p>
+        <p class="result-kicker" id="result-kicker">SENDING</p>
+        <h1 id="result-title">送信中</h1>
+        <p id="result-detail">そのままお待ちください。</p>
         <div class="send-progress" id="send-progress"><i></i></div>
-        <button class="quiet-button" id="result-action" type="button" hidden><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>ロック画面へ戻る</button>
+        <button class="quiet-button" id="result-action" type="button" hidden><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span><span>戻る</span></button>
         <p class="countdown" id="countdown"></p>
       </div>
     </section>
-    <footer class="footer"><span>EPSON EW-M634T</span><span>ローカル印刷</span></footer>
   </main>
   <script src="/app.js"></script>
 </body>
