@@ -1,6 +1,6 @@
 {
   "host": "0.0.0.0",
-  "port": 8000,
+  "port": 8765,
   "printer_name": "EPSON_EW_M634T_Series",
   "pdf_path": "assets/connection-test.pdf",
   "cooldown_seconds": 15

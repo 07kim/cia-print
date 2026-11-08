@@ -7,7 +7,7 @@
 1. MacとiPadとプリンターを同じネットワークへ接続する。
 2. Macの「プリンタとスキャナ」でEW-M634Tを追加する。
 3. ターミナルでこのフォルダーを開き、`npm run start:local`を実行する。
-4. Macに表示されたIPアドレスを確認し、iPadのSafariで`http://MacのIPアドレス:8000`を開く。
+4. Macに表示されたIPアドレスを確認し、iPadのSafariで`http://MacのIPアドレス:8765`を開く。
 5. 「印刷する」を押す。
 
 現在は`assets/connection-test.pdf`を1部印刷します。本番資料へ変更するときはPDFを配置し、`local-config.json`の`pdf_path`を変更してください。
