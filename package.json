@@ -1,0 +1,10 @@
+{
+  "name": "cia-print",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check app.js && node --check admin/admin.js && node --check api/_lib/core.js && node --check api/config.js && node --check api/admin/login.js && node --check api/admin/logout.js && node --check api/epson/connect.js && node --check api/epson/callback.js && node --check api/epson/status.js && node --check api/epson/disconnect.js && node --check api/epson/test-print.js"
+  }
+}
+

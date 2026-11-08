@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#eef2f5" />
+    <title>資料出力</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="terminal" aria-labelledby="page-title">
+      <header class="terminal__header">
+        <div class="brand" aria-label="CIA Internet Co.">
+          <svg class="brand__mark" viewBox="0 0 48 48" aria-hidden="true">
+            <path d="M24 5 42 37H6L24 5Z" fill="none" stroke="currentColor" stroke-width="2.4" />
+            <path d="m24 5 6 20-6 12-6-12 6-20Z" fill="currentColor" opacity=".16" />
+            <path d="m18 25 6 12 6-12-6-4-6 4Z" fill="none" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <div>
+            <p class="brand__name">CIA Internet Co.</p>
+            <p class="brand__system">DOCUMENT OUTPUT TERMINAL</p>
+          </div>
+        </div>
+        <div class="device-state" role="status">
+          <span class="device-state__lamp" aria-hidden="true"></span>
+          <span>プリンター準備完了</span>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <div class="document-area">
+          <div class="document-area__heading">
+            <div>
+              <p class="eyebrow">OUTPUT DOCUMENT</p>
+              <h1 id="page-title">資料を印刷</h1>
+            </div>
+            <p class="document-area__count">1 / 1</p>
+          </div>
+
+          <article class="paper" aria-label="印刷する資料のプレビュー">
+            <div class="paper__topline">
+              <span>CIA INTERNET CO.</span>
+              <span>INTERNAL DOCUMENT</span>
+            </div>
+            <div class="paper__body">
+              <p class="paper__category">調査資料</p>
+              <h2>記録照合票</h2>
+              <div class="paper__rule"></div>
+              <dl class="paper__fields">
+                <div><dt>管理区分</dt><dd>社内資料</dd></div>
+                <div><dt>出力形式</dt><dd>A4 / 片面</dd></div>
+                <div><dt>文書番号</dt><dd>CIA-DOC-1120</dd></div>
+              </dl>
+              <div class="paper__lines" aria-hidden="true">
+                <span></span><span></span><span></span><span></span>
+              </div>
+            </div>
+            <div class="paper__footer">AUTHORIZED OUTPUT ONLY</div>
+          </article>
+        </div>
+
+        <aside class="control" aria-label="印刷操作">
+          <div class="control__summary">
+            <p class="eyebrow">PRINT SETTINGS</p>
+            <h2>印刷設定</h2>
+            <dl class="settings">
+              <div><dt>用紙</dt><dd>A4</dd></div>
+              <div><dt>カラー</dt><dd>白黒</dd></div>
+              <div><dt>印刷面</dt><dd>片面</dd></div>
+              <div><dt>部数</dt><dd>1部</dd></div>
+            </dl>
+          </div>
+
+          <div class="control__action">
+            <div class="status-message" id="status-message" aria-live="polite">
+              <svg class="status-message__icon" viewBox="0 0 32 32" aria-hidden="true">
+                <path d="M9 12V4h14v8M8 24H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h22a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-3" />
+                <path d="M8 19h16v9H8zM23 16h2" />
+              </svg>
+              <div>
+                <p class="status-message__title" id="status-title">印刷できます</p>
+                <p class="status-message__detail" id="status-detail">下のボタンを押してください</p>
+              </div>
+            </div>
+            <div class="progress" id="progress" hidden aria-hidden="true">
+              <span class="progress__bar" id="progress-bar"></span>
+            </div>
+            <button class="print-button" id="print-button" type="button">
+              <svg viewBox="0 0 32 32" aria-hidden="true">
+                <path d="M9 12V4h14v8M8 24H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h22a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-3" />
+                <path d="M8 19h16v9H8zM23 16h2" />
+              </svg>
+              <span>印刷する</span>
+            </button>
+          </div>
+        </aside>
+      </section>
+
+      <footer class="terminal__footer">
+        <span>端末番号 PRN-01</span>
+        <span>用紙残量 十分</span>
+        <span>接続状態 オンライン</span>
+      </footer>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>
