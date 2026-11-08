@@ -1,130 +1,93 @@
-const elements = {
-  loginPanel: document.querySelector("#login-panel"),
-  loginForm: document.querySelector("#login-form"),
-  loginFeedback: document.querySelector("#login-feedback"),
-  dashboard: document.querySelector("#dashboard"),
-  statusDot: document.querySelector("#status-dot"),
-  statusLabel: document.querySelector("#status-label"),
-  statusDetail: document.querySelector("#status-detail"),
-  configured: document.querySelector("#configured-value"),
-  authorized: document.querySelector("#authorized-value"),
-  connected: document.querySelector("#connected-value"),
-  product: document.querySelector("#product-value"),
-  serial: document.querySelector("#serial-value"),
-  redirectUri: document.querySelector("#redirect-uri"),
-  refresh: document.querySelector("#refresh-button"),
-  connect: document.querySelector("#connect-button"),
-  disconnect: document.querySelector("#disconnect-button"),
-  testPrint: document.querySelector("#test-print-button"),
-  jobResult: document.querySelector("#job-result strong"),
-  copyUri: document.querySelector("#copy-uri"),
+const $ = (selector) => document.querySelector(selector);
+const ui = {
+  login: $("#login"), dashboard: $("#dashboard"), loginForm: $("#login-form"),
+  pin: $("#pin"), loginMessage: $("#login-message"), dashboardMessage: $("#dashboard-message"),
+  status: $("#status-copy"), settingsForm: $("#settings-form"), uploadForm: $("#upload-form"),
+  password: $("#access-password"), printer: $("#printer-name"), reset: $("#reset-seconds"),
+  cooldown: $("#cooldown-seconds"), newPin: $("#new-pin"), documentName: $("#document-name"),
+  file: $("#document-file"), reprint: $("#reprint"),
 };
+let adminPin = "";
 
-async function json(url, options) {
+async function api(url, options = {}) {
   const response = await fetch(url, {
-    ...options,
-    headers: { "Content-Type": "application/json", ...options?.headers },
+    cache: "no-store", ...options,
+    headers: { "X-Admin-PIN": adminPin, ...options.headers },
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(data.message || "Request failed");
-    error.code = data.code;
-    throw error;
-  }
+  if (!response.ok || data.ok === false) throw new Error(data.message || "処理に失敗しました。");
   return data;
 }
 
-function setOverview(kind, label, detail) {
-  elements.statusDot.className = `status-dot${kind ? ` is-${kind}` : ""}`;
-  elements.statusLabel.textContent = label;
-  elements.statusDetail.textContent = detail;
+function message(text, error = false) {
+  ui.dashboardMessage.textContent = text;
+  ui.dashboardMessage.classList.toggle("error", error);
 }
 
-async function load() {
-  const config = await json("/api/config");
-  elements.redirectUri.textContent = config.redirectUri;
-  if (!config.authenticated) {
-    elements.loginPanel.hidden = false;
-    elements.dashboard.hidden = true;
-    return;
-  }
-  elements.loginPanel.hidden = true;
-  elements.dashboard.hidden = false;
-  await refreshStatus();
+async function loadDashboard() {
+  const config = await api("/api/admin/config");
+  ui.password.value = config.accessPassword;
+  ui.printer.value = config.printerName;
+  ui.reset.value = config.resetSeconds;
+  ui.cooldown.value = config.cooldownSeconds;
+  ui.documentName.textContent = config.documentName;
+  ui.status.textContent = `${config.printerName} / ${config.documentName}`;
+  ui.login.hidden = true;
+  ui.dashboard.hidden = false;
 }
 
-async function refreshStatus() {
-  elements.refresh.disabled = true;
-  setOverview("", "確認中", "プリンター状態を取得しています");
-  try {
-    const status = await json("/api/epson/status");
-    elements.configured.textContent = status.configured ? "設定済み" : "未設定";
-    elements.authorized.textContent = status.authorized ? "認証済み" : "未認証";
-    elements.connected.textContent = status.device?.connected ? "オンライン" : "-";
-    elements.product.textContent = status.device?.productName || "-";
-    elements.serial.textContent = status.device?.serialNumber || "-";
-    elements.connect.hidden = !status.configured || status.authorized;
-    elements.disconnect.disabled = !status.authorized;
-    elements.testPrint.disabled = !status.device?.connected;
-    if (!status.configured) {
-      setOverview("error", "API設定が必要です", "VercelへEpson Connectの認証情報を登録してください");
-    } else if (!status.authorized) {
-      setOverview("", "プリンター未認証", "Epsonで認証を押して使用する機器を選んでください");
-    } else if (!status.device?.connected) {
-      setOverview("error", "プリンターはオフラインです", "電源とインターネット接続を確認してください");
-    } else {
-      setOverview("online", "プリンター接続済み", "テスト印刷を実行できます");
-    }
-  } catch (error) {
-    if (error.code === "ADMIN_AUTH_REQUIRED") return load();
-    setOverview("error", "状態を確認できません", "時間を置いて再確認してください");
-  } finally {
-    elements.refresh.disabled = false;
-  }
-}
-
-elements.loginForm.addEventListener("submit", async (event) => {
+ui.loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  elements.loginFeedback.textContent = "";
+  adminPin = ui.pin.value.trim();
   try {
-    await json("/api/admin/login", {
+    await loadDashboard();
+  } catch (error) {
+    ui.loginMessage.textContent = error.message;
+  }
+});
+
+ui.settingsForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  message("保存しています…");
+  try {
+    const nextPin = ui.newPin.value.trim();
+    const result = await api("/api/admin/config", {
       method: "POST",
-      body: JSON.stringify({ pin: new FormData(elements.loginForm).get("pin") }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accessPassword: ui.password.value.trim(),
+        printerName: ui.printer.value.trim(),
+        resetSeconds: Number(ui.reset.value),
+        cooldownSeconds: Number(ui.cooldown.value),
+        adminPin: nextPin || undefined,
+      }),
     });
-    await load();
-  } catch {
-    elements.loginFeedback.textContent = "PINが一致しません。";
-  }
+    if (nextPin) adminPin = nextPin;
+    ui.newPin.value = "";
+    message(result.message);
+  } catch (error) { message(error.message, true); }
 });
 
-elements.refresh.addEventListener("click", refreshStatus);
-elements.disconnect.addEventListener("click", async () => {
-  await json("/api/epson/disconnect", { method: "POST" });
-  elements.jobResult.textContent = "接続を解除しました";
-  await refreshStatus();
-});
-elements.testPrint.addEventListener("click", async () => {
-  elements.testPrint.disabled = true;
-  elements.testPrint.textContent = "送信中...";
-  elements.jobResult.textContent = "印刷データを送信しています";
+ui.uploadForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const body = new FormData();
+  body.append("document", ui.file.files[0]);
+  message("PDFを保存しています…");
   try {
-    const result = await json("/api/epson/test-print", { method: "POST" });
-    elements.jobResult.textContent = `送信完了 / JOB ${result.jobId}`;
-  } catch {
-    elements.jobResult.textContent = "送信に失敗しました";
-  } finally {
-    elements.testPrint.textContent = "テスト印刷";
-    await refreshStatus();
-  }
-});
-elements.copyUri.addEventListener("click", async () => {
-  await navigator.clipboard.writeText(elements.redirectUri.textContent);
-  elements.copyUri.textContent = "コピー済み";
-  window.setTimeout(() => (elements.copyUri.textContent = "コピー"), 1400);
+    const result = await api("/api/admin/upload", { method: "POST", body });
+    message(result.message);
+    ui.file.value = "";
+    await loadDashboard();
+  } catch (error) { message(error.message, true); }
 });
 
-const query = new URLSearchParams(location.search);
-if (query.get("connected") === "1") elements.jobResult.textContent = "Epson認証が完了しました";
-if (query.has("error")) setOverview("error", "認証を完了できませんでした", "設定を確認してもう一度お試しください");
-load().catch(() => setOverview("error", "管理画面を読み込めません", "再読み込みしてください"));
-
+ui.reprint.addEventListener("click", async () => {
+  if (!window.confirm("現在の固定資料を1部印刷しますか？")) return;
+  ui.reprint.disabled = true;
+  message("プリンターへ送信しています…");
+  try {
+    const result = await api("/api/admin/print", { method: "POST" });
+    message(`再印刷を受け付けました。 ${result.message}`);
+  } catch (error) { message(error.message, true); }
+  finally { ui.reprint.disabled = false; }
+});

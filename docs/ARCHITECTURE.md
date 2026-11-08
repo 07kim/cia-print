@@ -3,7 +3,7 @@
 ## 境界
 
 - 参加者画面は固定資料の印刷操作だけを提供する。
-- `/admin` はプリンター設定、接続確認、テスト印刷だけを提供する。
+- `/admin` は端末設定、固定PDF差し替え、管理者再印刷を提供する。
 - 本番印刷画面とAPIはMac上の`local_server.py`から配信する。
 - iPad、Mac、プリンターは同一LAN内で通信する。
 - Epson Connectのアカウント、API、OAuth、インターネット接続を必要としない。
@@ -11,10 +11,17 @@
 
 ## ローカル印刷
 
-1. iPadがMacの`POST /api/print`へ固定資料の印刷を要求する。
-2. Macが同時処理ロックとクールダウンを確認する。
-3. `lp -d <printer> -n 1 <fixed-pdf>`を引数配列で実行する。
-4. CUPSが受け付けた場合、iPadへ受付成功を返す。
+1. iPadが`POST /api/unlock`へパスワードを送り、一時トークンを受け取る。
+2. 正解時だけ印刷操作を表示し、`POST /api/print`へ一時トークンを付けて要求する。
+3. Macは一時トークンを1回で無効化し、同時処理ロックとクールダウンを確認する。
+4. `lp -d <printer> -n 1 <fixed-pdf>`を引数配列で実行する。
+5. CUPS受付後、iPadは設定時間だけ受付結果を表示し、ロック画面へ戻る。
+
+## 運用
+
+- `scripts/start_local.sh`は`caffeinate`とサーバーを同時に起動する。
+- `scripts/install_autostart.sh`はユーザーのLaunchAgentを作成し、Macログイン時に起動する。
+- 管理用PINと参加者パスワードはイベント演出用であり、強固なネットワークセキュリティではない。
 
 ## 制約
 

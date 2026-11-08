@@ -3,5 +3,8 @@
   "port": 8765,
   "printer_name": "EPSON_EW_M634T_Series",
   "pdf_path": "assets/connection-test.pdf",
-  "cooldown_seconds": 15
+  "cooldown_seconds": 15,
+  "reset_seconds": 20,
+  "access_password": "PRINT",
+  "admin_pin": "6340"
 }

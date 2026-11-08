@@ -1,11 +1,11 @@
 {
   "name": "cia-print",
-  "version": "0.2.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start:local": "python3 local_server.py",
-    "check": "node --check app.js && python3 -m py_compile local_server.py"
+    "check": "node --check app.js && node --check admin/admin.js && python3 -m py_compile local_server.py"
   }
 }
 
