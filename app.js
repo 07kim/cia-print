@@ -7,6 +7,7 @@ const ui = {
   printButton: document.querySelector("#print-button"),
   resultLayer: document.querySelector("#result-layer"),
   resultCard: document.querySelector("#result-card"),
+  resultSymbol: document.querySelector("#result-symbol .material-symbols-rounded"),
   resultKicker: document.querySelector("#result-kicker"),
   resultTitle: document.querySelector("#result-title"),
   resultDetail: document.querySelector("#result-detail"),
@@ -41,7 +42,7 @@ function resetToLock() {
   window.clearInterval(resetTimer);
   token = "";
   ui.password.value = "";
-  ui.authMessage.textContent = "英数字を入力";
+  ui.authMessage.textContent = "英数字で入力してください";
   ui.authMessage.className = "form-message";
   ui.form.classList.remove("is-error");
   ui.printButton.disabled = false;
@@ -57,6 +58,7 @@ function showResult(kind, kicker, title, detail) {
   ui.resultKicker.textContent = kicker;
   ui.resultTitle.textContent = title;
   ui.resultDetail.textContent = detail;
+  ui.resultSymbol.textContent = { sending: "print", success: "check_circle", error: "error" }[kind] || "print";
   ui.progress.hidden = kind !== "sending";
 }
 
@@ -100,7 +102,7 @@ ui.form.addEventListener("submit", async (event) => {
 ui.password.addEventListener("input", () => {
   ui.form.classList.remove("is-error");
   ui.authMessage.className = "form-message";
-  ui.authMessage.textContent = "英数字を入力";
+  ui.authMessage.textContent = "英数字で入力してください";
 });
 
 ui.printButton.addEventListener("click", async () => {
@@ -122,7 +124,6 @@ ui.printButton.addEventListener("click", async () => {
     token = "";
     showResult("error", "OUTPUT ERROR", "印刷できませんでした", error.message);
     ui.action.hidden = false;
-    ui.action.textContent = "ロック画面へ戻る";
   }
 });
 

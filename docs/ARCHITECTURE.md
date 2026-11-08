@@ -8,6 +8,7 @@
 - iPad、Mac、プリンターは同一LAN内で通信する。
 - Epson Connectのアカウント、API、OAuth、インターネット接続を必要としない。
 - 固定印刷物はリポジトリ内のPDFとして管理する。
+- UIアイコンは`assets/fonts/material-symbols-rounded-subset.ttf`として必要字形だけを同梱し、外部フォント配信へ依存しない。
 
 ## ローカル印刷
 

@@ -3,45 +3,58 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f7f5">
   <title>CIA Print 管理</title>
   <link rel="stylesheet" href="/admin/admin.css">
 </head>
 <body>
   <main class="shell">
-    <header><div><small>LOCAL PRINT RELAY</small><h1>印刷端末 管理</h1></div><a href="/">参加者画面</a></header>
-    <section class="login card" id="login">
-      <h2>管理者PIN</h2>
-      <form id="login-form"><input id="pin" type="password" inputmode="numeric" autocomplete="off"><button>開く</button></form>
-      <p id="login-message" class="message"></p>
+    <header class="page-header">
+      <div><p class="eyebrow">LOCAL PRINT RELAY</p><h1>印刷端末 管理</h1></div>
+      <a class="participant-link" href="/"><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>参加者画面</a>
+    </header>
+
+    <section class="login" id="login">
+      <div class="section-icon" aria-hidden="true"><span class="material-symbols-rounded">lock</span></div>
+      <div class="login-copy"><p class="eyebrow">ADMIN ACCESS</p><h2>管理者PIN</h2><p>端末設定と印刷資料を管理します。</p></div>
+      <form id="login-form" class="login-form">
+        <label for="pin">PIN</label>
+        <div class="inline-control"><input id="pin" type="password" inputmode="numeric" autocomplete="off" aria-describedby="login-message"><button type="submit">開く</button></div>
+      </form>
+      <p id="login-message" class="message" aria-live="polite"></p>
     </section>
+
     <div id="dashboard" hidden>
-      <section class="status card"><span class="lamp"></span><div><strong>ローカル印刷サーバー</strong><small id="status-copy">状態を確認中</small></div></section>
-      <div class="grid">
-        <section class="card">
-          <small>SETTINGS</small><h2>端末設定</h2>
+      <section class="status" aria-label="接続状態">
+        <span class="material-symbols-rounded status-icon" aria-hidden="true">wifi</span>
+        <div><strong>ローカル印刷サーバー</strong><small id="status-copy">状態を確認中</small></div>
+      </section>
+      <div class="settings-layout">
+        <section class="settings-section">
+          <div class="section-heading"><span class="material-symbols-rounded" aria-hidden="true">settings</span><div><p class="eyebrow">SETTINGS</p><h2>端末設定</h2></div></div>
           <form id="settings-form" class="fields">
             <label>参加者パスワード<input id="access-password" required></label>
             <label>プリンター名<input id="printer-name" required></label>
             <label>印刷後に戻る秒数<input id="reset-seconds" type="number" min="5" max="300" required></label>
             <label>連続印刷の待機秒数<input id="cooldown-seconds" type="number" min="0" max="300" required></label>
             <label>新しい管理者PIN（変更時のみ）<input id="new-pin" type="password" inputmode="numeric"></label>
-            <button>設定を保存</button>
+            <button type="submit"><span class="material-symbols-rounded" aria-hidden="true">check_circle</span>設定を保存</button>
           </form>
         </section>
-        <section class="card">
-          <small>DOCUMENT</small><h2>印刷資料</h2>
-          <p class="document-name">現在: <strong id="document-name">-</strong></p>
+        <section class="settings-section document-section">
+          <div class="section-heading"><span class="material-symbols-rounded" aria-hidden="true">description</span><div><p class="eyebrow">DOCUMENT</p><h2>印刷資料</h2></div></div>
+          <p class="document-name"><span>現在の資料</span><strong id="document-name">-</strong></p>
           <form id="upload-form" class="upload">
             <label>差し替えるPDF<input id="document-file" type="file" accept="application/pdf" required></label>
-            <button>PDFを差し替える</button>
+            <button type="submit"><span class="material-symbols-rounded" aria-hidden="true">upload_file</span>PDFを差し替える</button>
           </form>
-          <hr>
-          <h3>管理者再印刷</h3>
-          <p>現在の固定資料を1部送信します。</p>
-          <button class="secondary" id="reprint" type="button">再印刷する</button>
+          <div class="reprint-area">
+            <div><h3>管理者再印刷</h3><p>現在の固定資料を1部送信します。</p></div>
+            <button class="secondary" id="reprint" type="button"><span class="material-symbols-rounded" aria-hidden="true">print</span>再印刷する</button>
+          </div>
         </section>
       </div>
-      <p class="message" id="dashboard-message" aria-live="polite"></p>
+      <p class="message dashboard-message" id="dashboard-message" aria-live="polite"></p>
     </div>
   </main>
   <script src="/admin/admin.js"></script>
