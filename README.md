@@ -1,25 +1,22 @@
 # CIA Print
 
-固定資料を1回だけ出力する、イベント参加者向け印刷端末です。Epson EW-M634Tとの接続確認用管理画面を含みます。
+固定資料を1回だけ出力する、イベント参加者向け印刷端末です。iPadからMacを経由し、macOSの印刷機能でEpson EW-M634Tへ送信します。
 
-## 現在の範囲
+## 最短起動手順
 
-- 固定資料のプレビュー
-- 固定された印刷条件の表示
-- 送信中、印刷中、完了の画面遷移
-- 処理中の連打防止
-- `?fail=1` によるエラー表示確認
-- `/admin` のプリンター管理画面
-- Epson Connect API 2.0の機器認証、状態確認、固定A4テスト印刷
+1. MacとiPadとプリンターを同じネットワークへ接続する。
+2. Macの「プリンタとスキャナ」でEW-M634Tを追加する。
+3. ターミナルでこのフォルダーを開き、`npm run start:local`を実行する。
+4. Macに表示されたIPアドレスを確認し、iPadのSafariで`http://MacのIPアドレス:8000`を開く。
+5. 「印刷する」を押す。
 
-参加者画面はまだ試作動作です。実機への送信は管理画面のテスト印刷だけに限定しています。
+現在は`assets/connection-test.pdf`を1部印刷します。本番資料へ変更するときはPDFを配置し、`local-config.json`の`pdf_path`を変更してください。
 
-## 初回設定
+## 設定
 
-1. EW-M634TをEpson Connectへ登録する。
-2. Epson Connect APIサイトでアプリを作成する。
-3. Redirect URIに `https://print-kappa-one.vercel.app/api/epson/callback` を登録する。
-4. `.env.example` に記載した環境変数をVercelへ設定する。
-5. 再デプロイ後、`/admin` からEpsonで認証する。
+- `printer_name`: `lpstat -p -d`で表示されるプリンター名
+- `pdf_path`: 固定印刷物のパス
+- `port`: iPadから開くポート番号
+- `cooldown_seconds`: 二重印刷を防ぐ待機時間
 
-認証情報はGitHubへ保存しません。詳しい境界は `docs/ARCHITECTURE.md` を参照してください。
+Epson Connect、Epson Global ID、Vercelの環境変数はこの方式では不要です。Macはスリープさせず、サーバーを起動したままにしてください。

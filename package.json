@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check app.js && node --check admin/admin.js && node --check api/_lib/core.js && node --check api/config.js && node --check api/admin/login.js && node --check api/admin/logout.js && node --check api/epson/connect.js && node --check api/epson/callback.js && node --check api/epson/status.js && node --check api/epson/disconnect.js && node --check api/epson/test-print.js"
+    "start:local": "python3 local_server.py",
+    "check": "node --check app.js && python3 -m py_compile local_server.py"
   }
 }
 

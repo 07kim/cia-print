@@ -5,8 +5,6 @@ const statusDetail = document.querySelector("#status-detail");
 const progress = document.querySelector("#progress");
 const progressBar = document.querySelector("#progress-bar");
 
-const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
-
 function setStatus(title, detail, kind = "") {
   statusTitle.textContent = title;
   statusDetail.textContent = detail;
@@ -17,38 +15,46 @@ function setStatus(title, detail, kind = "") {
 async function runPrintSequence() {
   if (printButton.disabled) return;
 
-  const shouldFail = new URLSearchParams(window.location.search).get("fail") === "1";
   printButton.disabled = true;
   progress.hidden = false;
   progressBar.style.width = "0%";
   setStatus("印刷データを送信しています", "そのままお待ちください");
+  const requestId = window.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 
   requestAnimationFrame(() => {
-    progressBar.style.width = "42%";
+    progressBar.style.width = "70%";
   });
-  await wait(1200);
 
-  if (shouldFail) {
+  try {
+    const response = await fetch("/api/print", {
+      method: "POST",
+      headers: { "X-Request-ID": requestId },
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw new Error(result.message || "印刷指示を送信できませんでした。");
+
     progressBar.style.width = "100%";
-    await wait(500);
+    window.setTimeout(() => { progress.hidden = true; }, 350);
+    setStatus("印刷指示を送信しました", "用紙が出てくるまでお待ちください", "success");
+    printButton.querySelector("span").textContent = "送信済み";
+    printButton.style.background = "var(--green)";
+    printButton.style.boxShadow = "0 4px 0 #116242";
+  } catch (error) {
     progress.hidden = true;
-    setStatus("印刷できませんでした", "お手数ですが、係員へお知らせください", "error");
+    setStatus("印刷できませんでした", error.message || "係員へお知らせください", "error");
     printButton.disabled = false;
-    printButton.querySelector("span").textContent = "もう一度印刷する";
-    return;
+    printButton.querySelector("span").textContent = "もう一度送信する";
   }
-
-  setStatus("印刷しています", "用紙が出るまでお待ちください");
-  progressBar.style.width = "78%";
-  await wait(1800);
-  progressBar.style.width = "100%";
-  await wait(650);
-
-  progress.hidden = true;
-  setStatus("印刷を開始しました", "印刷された用紙をお取りください", "success");
-  printButton.querySelector("span").textContent = "印刷済み";
-  printButton.style.background = "var(--green)";
-  printButton.style.boxShadow = "0 4px 0 #116242";
 }
 
 printButton.addEventListener("click", runPrintSequence);
+
+fetch("/api/status", { cache: "no-store" })
+  .then((response) => response.json())
+  .then((status) => {
+    if (!status.ready) throw new Error();
+  })
+  .catch(() => {
+    setStatus("プリンターへ接続できません", "係員へお知らせください", "error");
+    printButton.disabled = true;
+  });
