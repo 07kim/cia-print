@@ -29,25 +29,53 @@ fi
 typeset -a candidates
 candidates=()
 
+add_candidate() {
+  local uri="$1"
+  local authority host
+
+  if [[ "$uri" == dnssd://* ]]; then
+    candidates+=("$uri")
+    return
+  fi
+
+  # CUPS may report a bare host such as ipp://EW-M634T:631/ even when that
+  # name cannot be resolved by macOS. Only accept an IP address or a Bonjour
+  # .local host for direct IPP URLs.
+  if [[ "$uri" == ipp://* || "$uri" == ipps://* ]]; then
+    authority="${uri#*://}"
+    authority="${authority%%/*}"
+    host="${authority%%:*}"
+    if [[ "$host" == *.local || "$host" == <->.<->.<->.<-> ]]; then
+      candidates+=("$uri")
+    fi
+  fi
+}
+
 # 既に別名で追加されているEW-M634Tの接続先も再利用する。
 while IFS= read -r line; do
   [[ "$line" == *":"* ]] || continue
   uri="${line#*: }"
   if print -r -- "$line" | /usr/bin/grep -Eiq 'EW[-_ %]?M634T|M634T' && \
      print -r -- "$uri" | /usr/bin/grep -Eiq '^(dnssd|ipp|ipps)://'; then
-    candidates+=("$uri")
+    add_candidate "$uri"
   fi
 done < <("$LPSTAT_BIN" -v 2>/dev/null || true)
 
 # 未登録ならBonjour/IPPのネットワーク機器からEW-M634Tだけを探す。
 if [[ -n "$LPINFO_BIN" ]]; then
-  while IFS= read -r line; do
-    uri="${line#* }"
-    if print -r -- "$line" | /usr/bin/grep -Eiq 'EW[-_ %]?M634T|M634T' && \
-       print -r -- "$uri" | /usr/bin/grep -Eiq '^(dnssd|ipp|ipps)://'; then
-      candidates+=("$uri")
-    fi
-  done < <("$LPINFO_BIN" -v 2>/dev/null || true)
+  attempts="${CIA_PRINT_DISCOVERY_ATTEMPTS:-4}"
+  attempt=1
+  while (( attempt <= attempts )); do
+    while IFS= read -r line; do
+      uri="${line#* }"
+      if print -r -- "$line" | /usr/bin/grep -Eiq 'EW[-_ %]?M634T|M634T' && \
+         print -r -- "$uri" | /usr/bin/grep -Eiq '^(dnssd|ipp|ipps)://'; then
+        add_candidate "$uri"
+      fi
+    done < <("$LPINFO_BIN" -v 2>/dev/null || true)
+    (( attempt < attempts )) && /bin/sleep 2
+    (( attempt += 1 ))
+  done
 fi
 
 # 同じURIが複数の検索結果に出ても1候補として扱う。
@@ -63,6 +91,17 @@ for uri in "${candidates[@]}"; do
   done
   (( duplicate == 0 )) && unique_candidates+=("$uri")
 done
+
+# Bonjour service URLs are more reliable than a second direct IPP candidate
+# for the same physical printer, so use only Bonjour when it is available.
+typeset -a bonjour_candidates
+bonjour_candidates=()
+for uri in "${unique_candidates[@]}"; do
+  [[ "$uri" == dnssd://* ]] && bonjour_candidates+=("$uri")
+done
+if (( ${#bonjour_candidates[@]} > 0 )); then
+  unique_candidates=("${bonjour_candidates[@]}")
+fi
 
 if (( ${#unique_candidates[@]} == 0 )); then
   print " EW-M634Tを自動検出できませんでした。"

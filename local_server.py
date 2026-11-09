@@ -6,6 +6,8 @@ from __future__ import annotations
 from email.parser import BytesParser
 from email.policy import default as email_policy
 import hmac
+import errno
+import ipaddress
 import json
 import re
 import secrets
@@ -37,6 +39,21 @@ MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 AUTHORIZATION_SECONDS = 70
 CLIENT_AUTHORIZATION_SECONDS = 60
 PRINT_JOB_MAX_AGE_SECONDS = 60
+LAN_NETWORKS = tuple(
+    ipaddress.ip_network(network)
+    for network in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16")
+)
+
+
+def is_usable_lan_address(address: str) -> bool:
+    """Accept addresses that an iPad on the same local network can normally reach."""
+    try:
+        parsed = ipaddress.ip_address(address)
+    except ValueError:
+        return False
+    return isinstance(parsed, ipaddress.IPv4Address) and any(
+        parsed in network for network in LAN_NETWORKS
+    )
 
 
 def local_ip_addresses() -> list[str]:
@@ -65,7 +82,7 @@ def local_ip_addresses() -> list[str]:
             addresses.add(result[4][0])
     except OSError:
         pass
-    return sorted(address for address in addresses if not address.startswith("127."))
+    return sorted(address for address in addresses if is_usable_lan_address(address))
 
 
 def load_config() -> dict:
@@ -127,9 +144,21 @@ def constant_match(value: str, expected: str) -> bool:
 
 def clear_stale_print_jobs() -> None:
     """Discard jobs left in CUPS before this event session starts."""
+    printer = str(CONFIG["printer_name"])
+    try:
+        registered = subprocess.run(
+            ["lpstat", "-p", printer],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if registered.returncode != 0:
+            return
+    except (OSError, subprocess.TimeoutExpired):
+        return
     try:
         result = subprocess.run(
-            ["cancel", "-a", str(CONFIG["printer_name"])],
+            ["cancel", "-a", printer],
             capture_output=True,
             text=True,
             timeout=10,
@@ -170,6 +199,36 @@ def expire_print_job_later(output: str) -> None:
     timer.start()
 
 
+def printer_status_error(printer: str) -> str | None:
+    """Return a participant-safe message when CUPS cannot use the printer."""
+    try:
+        state = subprocess.run(
+            ["lpstat", "-l", "-p", printer],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return "プリンターの接続状態を確認できませんでした。"
+    if state.returncode != 0:
+        return "Macにプリンターが登録されていません。管理者にお知らせください。"
+    state_text = f"{state.stdout}\n{state.stderr}".lower()
+    error_words = (
+        "disabled",
+        "offline",
+        "not responding",
+        "unable",
+        "unreachable",
+        "停止中",
+        "一時停止",
+        "応答していません",
+        "接続できません",
+    )
+    if any(word in state_text for word in error_words):
+        return "プリンターへ接続できません。電源とWi-Fiを確認してください。"
+    return None
+
+
 def run_print() -> tuple[bool, str, int]:
     global LAST_PRINT_AT
     pdf = document_path()
@@ -181,10 +240,15 @@ def run_print() -> tuple[bool, str, int]:
         if remaining > 0:
             return False, f"印刷機を準備しています。{remaining}秒後にもう一度お試しください。", 429
 
+        printer = str(CONFIG["printer_name"])
+        status_error = printer_status_error(printer)
+        if status_error:
+            return False, status_error, 503
+
         command = [
             "lp",
             "-d",
-            str(CONFIG["printer_name"]),
+            printer,
             "-n",
             "1",
             "-o",
@@ -206,7 +270,21 @@ def run_print() -> tuple[bool, str, int]:
         if result.returncode != 0:
             detail = (result.stderr or result.stdout or "印刷命令が失敗しました").strip()
             return False, detail, 503
-        expire_print_job_later(result.stdout or "")
+        output = result.stdout or ""
+        job_match = re.search(r"request id is ([^\s]+)", output)
+        job_id = job_match.group(1) if job_match else ""
+        # `lp` can accept a job before CUPS notices that a network printer is
+        # unreachable. Give it a short opportunity to surface that state so
+        # the participant never sees a false "受付完了".
+        for attempt in range(3):
+            if attempt:
+                time.sleep(1)
+            status_error = printer_status_error(printer)
+            if status_error:
+                if job_id:
+                    cancel_print_job(job_id)
+                return False, status_error, 503
+        expire_print_job_later(output)
         LAST_PRINT_AT = time.time()
         return True, (result.stdout or "印刷を受け付けました").strip(), 200
 
@@ -261,6 +339,10 @@ class PrintHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:
         path = urlparse(self.path).path
+        if path == "/favicon.ico":
+            self.send_response(HTTPStatus.NO_CONTENT)
+            self.end_headers()
+            return
         if path == "/api/status":
             pdf = document_path()
             self.send_json(
@@ -369,7 +451,18 @@ def serve() -> None:
     host = str(CONFIG["host"])
     port = int(CONFIG["port"])
     clear_stale_print_jobs()
-    server = ThreadingHTTPServer((host, port), PrintHandler)
+    try:
+        server = ThreadingHTTPServer((host, port), PrintHandler)
+    except OSError as error:
+        if error.errno == errno.EADDRINUSE:
+            print("\n CIA Printはすでに起動しています。")
+            addresses = local_ip_addresses()
+            for address in addresses:
+                print(f" 参加者画面  http://{address}:{port}/")
+                print(f" 管理画面    http://{address}:{port}/admin/")
+            print()
+            return
+        raise
     addresses = local_ip_addresses()
     print("\n" + "=" * 64)
     print(" CIA PRINT を起動しました")

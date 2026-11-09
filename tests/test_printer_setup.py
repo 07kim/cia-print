@@ -46,6 +46,7 @@ class PrinterSetupTests(unittest.TestCase):
                     "CIA_PRINT_LPSTAT_BIN": str(lpstat),
                     "CIA_PRINT_LPINFO_BIN": str(lpinfo),
                     "CIA_PRINT_LPADMIN_BIN": str(lpadmin),
+                    "CIA_PRINT_DISCOVERY_ATTEMPTS": "1",
                 }
             )
             result = subprocess.run(
@@ -90,6 +91,27 @@ class PrinterSetupTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(calls, "")
         self.assertIn("候補が複数", result.stdout)
+
+    def test_unresolvable_bare_ipp_host_is_not_registered(self):
+        result, calls = self.run_setup(
+            devices="network ipp://EW-M634T:631/ipp/print"
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(calls, "")
+        self.assertIn("自動検出できません", result.stdout)
+
+    def test_bonjour_candidate_is_preferred_over_direct_ipp(self):
+        bonjour = "dnssd://EPSON%20EW-M634T%20Series._ipp._tcp.local./?uuid=one"
+        devices = "\n".join(
+            [
+                "network ipp://192.168.75.45:631/ipp/print",
+                f"network {bonjour}",
+            ]
+        )
+        result, calls = self.run_setup(devices=devices)
+        self.assertEqual(result.returncode, 0)
+        self.assertIn(f"-v {bonjour}", calls)
+        self.assertNotIn("192.168.75.45", calls)
 
 
 if __name__ == "__main__":

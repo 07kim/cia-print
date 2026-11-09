@@ -2,6 +2,8 @@ from email.message import Message
 from io import BytesIO
 import time
 import unittest
+from unittest.mock import patch
+import subprocess
 
 import local_server
 
@@ -48,6 +50,38 @@ class PdfUploadTests(unittest.TestCase):
         handler.rfile = BytesIO(body)
 
         self.assertEqual(handler.read_uploaded_pdf(), pdf)
+
+
+class PrinterStatusTests(unittest.TestCase):
+    @patch("local_server.subprocess.run")
+    def test_unregistered_printer_is_not_reported_as_success(self, run):
+        run.return_value = subprocess.CompletedProcess([], 1, "", "unknown printer")
+
+        self.assertIn("登録されていません", local_server.printer_status_error("missing"))
+
+    @patch("local_server.subprocess.run")
+    def test_offline_printer_is_not_reported_as_success(self, run):
+        run.return_value = subprocess.CompletedProcess([], 0, "printer is offline", "")
+
+        self.assertIn("接続できません", local_server.printer_status_error("offline"))
+
+    @patch("local_server.subprocess.run")
+    def test_idle_printer_has_no_error(self, run):
+        run.return_value = subprocess.CompletedProcess([], 0, "printer is idle", "")
+
+        self.assertIsNone(local_server.printer_status_error("ready"))
+
+
+class LocalAddressTests(unittest.TestCase):
+    def test_accepts_common_wifi_and_tethering_addresses(self):
+        self.assertTrue(local_server.is_usable_lan_address("192.168.75.160"))
+        self.assertTrue(local_server.is_usable_lan_address("172.20.10.2"))
+        self.assertTrue(local_server.is_usable_lan_address("10.0.0.4"))
+
+    def test_rejects_loopback_and_unusable_special_addresses(self):
+        self.assertFalse(local_server.is_usable_lan_address("127.0.0.1"))
+        self.assertFalse(local_server.is_usable_lan_address("192.0.0.2"))
+        self.assertFalse(local_server.is_usable_lan_address("not-an-address"))
 
 if __name__ == "__main__":
     unittest.main()
