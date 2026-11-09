@@ -25,6 +25,7 @@ let resetSeconds = 20;
 let resetTimer = 0;
 
 const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 async function request(url, options = {}) {
   const response = await fetch(url, {
@@ -45,7 +46,45 @@ function showScreen(name) {
   ui.resultLayer.hidden = name !== "result";
 }
 
-function resetToHome() {
+function screenElement(name) {
+  return {
+    home: ui.home,
+    notice: ui.lockNotice,
+    lock: ui.lock,
+    release: ui.release,
+    result: ui.resultLayer,
+  }[name];
+}
+
+async function transitionTo(name) {
+  const incoming = screenElement(name);
+  const outgoing = [ui.home, ui.lockNotice, ui.lock, ui.release, ui.resultLayer]
+    .find((element) => !element.hidden);
+  if (!incoming || outgoing === incoming) return;
+  if (reduceMotion.matches) {
+    showScreen(name);
+    return;
+  }
+  if (outgoing) {
+    await outgoing.animate(
+      [
+        { opacity: 1, transform: "translateY(0) scale(1)" },
+        { opacity: 0, transform: "translateY(-8px) scale(.985)" },
+      ],
+      { duration: 220, easing: "cubic-bezier(.4,0,1,1)", fill: "forwards" },
+    ).finished.catch(() => {});
+  }
+  showScreen(name);
+  await incoming.animate(
+    [
+      { opacity: 0, transform: "translateY(12px) scale(.985)" },
+      { opacity: 1, transform: "translateY(0) scale(1)" },
+    ],
+    { duration: 420, easing: "cubic-bezier(.2,.8,.2,1)", fill: "both" },
+  ).finished.catch(() => {});
+}
+
+async function resetToHome() {
   window.clearInterval(resetTimer);
   token = "";
   ui.password.value = "";
@@ -56,26 +95,36 @@ function resetToHome() {
   ui.resultCard.className = "result-card";
   ui.action.hidden = true;
   ui.countdown.textContent = "";
-  showScreen("home");
+  await transitionTo("home");
 }
 
 async function openPasswordScreen() {
   if (ui.homeAction.disabled) return;
   ui.homeAction.disabled = true;
-  showScreen("notice");
+  await transitionTo("notice");
   await wait(1100);
-  showScreen("lock");
+  await transitionTo("lock");
   ui.homeAction.disabled = false;
 }
 
-function showResult(kind, kicker, title, detail) {
-  showScreen("result");
+async function showResult(kind, kicker, title, detail) {
+  const alreadyVisible = !ui.resultLayer.hidden;
+  if (!alreadyVisible) await transitionTo("result");
   ui.resultCard.className = `result-card ${kind ? `is-${kind}` : ""}`;
   ui.resultKicker.textContent = kicker;
   ui.resultTitle.textContent = title;
   ui.resultDetail.textContent = detail;
   ui.resultSymbol.textContent = { sending: "print", success: "check_circle", error: "error" }[kind] || "print";
   ui.progress.hidden = kind !== "sending";
+  if (alreadyVisible && !reduceMotion.matches) {
+    ui.resultCard.animate(
+      [
+        { opacity: .25, transform: "translateY(6px)" },
+        { opacity: 1, transform: "translateY(0)" },
+      ],
+      { duration: 360, easing: "cubic-bezier(.2,.8,.2,1)" },
+    );
+  }
 }
 
 function beginResetCountdown() {
@@ -110,7 +159,7 @@ ui.form.addEventListener("submit", async (event) => {
     });
     await wait(Math.max(0, 1200 - (performance.now() - startedAt)));
     token = result.token;
-    showScreen("release");
+    await transitionTo("release");
   } catch (error) {
     await wait(Math.max(0, 1200 - (performance.now() - startedAt)));
     ui.form.classList.add("is-error");
@@ -132,21 +181,21 @@ ui.password.addEventListener("input", () => {
 ui.printButton.addEventListener("click", async () => {
   if (!token || ui.printButton.disabled) return;
   ui.printButton.disabled = true;
-  showResult("sending", "SENDING", "送信中", "プリンターへ送信しています。");
+  await showResult("sending", "SENDING", "送信中", "プリンターへ送信しています。");
   try {
     const result = await request("/api/print", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
     token = "";
-    window.setTimeout(() => {
-      showResult("success", "ACCEPTED", "受付完了", "そのままお待ちください。");
+    window.setTimeout(async () => {
+      await showResult("success", "ACCEPTED", "受付完了", "そのままお待ちください。");
       ui.action.hidden = false;
       beginResetCountdown();
     }, 850);
   } catch (error) {
     token = "";
-    showResult("error", "OUTPUT ERROR", "印刷できませんでした", error.message);
+    await showResult("error", "OUTPUT ERROR", "印刷できませんでした", error.message);
     ui.action.hidden = false;
   }
 });
