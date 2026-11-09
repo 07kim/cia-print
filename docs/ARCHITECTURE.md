@@ -21,7 +21,10 @@
 
 ## 運用
 
-- `scripts/start_local.sh`は`caffeinate`とサーバーを同時に起動する。
+- `scripts/start_local.sh`はプリンター初期設定、`caffeinate`、サーバー起動を続けて実行する。
+- `scripts/setup_printer.sh`は、登録済みの`EPSON_EW_M634T_Series`を優先し、未登録時だけ同一LAN上のEW-M634TをBonjour/IPPで検出して、ドライバーレスのAirPrint/IPPプリンターとして登録する。
+- 自動登録の対象はEW-M634Tだけとする。未検出または複数候補の場合は別機種を登録せず、手動追加の案内を表示してサーバー起動は続ける。
+- 通常起動で登録に管理者権限が必要な場合だけパスワード入力を求める。Macログイン時の自動起動では入力待ちにせず、既存の登録状態で起動する。
 - サーバー起動時に、前回からCUPSへ残っている対象プリンターの印刷待ちを取り消す。
 - 新しく受け付けた印刷も60秒以内に完了しない場合はジョブ単位で取り消し、後日の再接続で排紙しない。
 - `scripts/install_autostart.sh`はユーザーのLaunchAgentを作成し、Macログイン時に起動する。
