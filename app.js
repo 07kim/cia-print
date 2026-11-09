@@ -1,4 +1,7 @@
 const ui = {
+  home: document.querySelector("#home-screen"),
+  homeAction: document.querySelector("#home-action"),
+  lockNotice: document.querySelector("#lock-notice-screen"),
   lock: document.querySelector("#lock-screen"),
   release: document.querySelector("#release-screen"),
   form: document.querySelector("#auth-form"),
@@ -21,6 +24,8 @@ let token = "";
 let resetSeconds = 20;
 let resetTimer = 0;
 
+const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
 async function request(url, options = {}) {
   const response = await fetch(url, {
     cache: "no-store",
@@ -28,17 +33,19 @@ async function request(url, options = {}) {
     headers: { "Content-Type": "application/json", ...options.headers },
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok || data.ok === false) throw new Error(data.message || "処理を完了できませんでした。");
+  if (!response.ok || data.ok === false) throw new Error(data.message || "通信できませんでした。もう一度お試しください。");
   return data;
 }
 
 function showScreen(name) {
+  ui.home.hidden = name !== "home";
+  ui.lockNotice.hidden = name !== "notice";
   ui.lock.hidden = name !== "lock";
   ui.release.hidden = name !== "release";
   ui.resultLayer.hidden = name !== "result";
 }
 
-function resetToLock() {
+function resetToHome() {
   window.clearInterval(resetTimer);
   token = "";
   ui.password.value = "";
@@ -49,7 +56,16 @@ function resetToLock() {
   ui.resultCard.className = "result-card";
   ui.action.hidden = true;
   ui.countdown.textContent = "";
+  showScreen("home");
+}
+
+async function openPasswordScreen() {
+  if (ui.homeAction.disabled) return;
+  ui.homeAction.disabled = true;
+  showScreen("notice");
+  await wait(1100);
   showScreen("lock");
+  ui.homeAction.disabled = false;
 }
 
 function showResult(kind, kicker, title, detail) {
@@ -68,9 +84,11 @@ function beginResetCountdown() {
   resetTimer = window.setInterval(() => {
     remaining -= 1;
     ui.countdown.textContent = `${remaining}秒後にロック画面へ戻ります`;
-    if (remaining <= 0) resetToLock();
+    if (remaining <= 0) resetToHome();
   }, 1000);
 }
+
+ui.homeAction.addEventListener("click", openPasswordScreen);
 
 ui.form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -82,18 +100,24 @@ ui.form.addEventListener("submit", async (event) => {
   const button = ui.form.querySelector("button");
   button.disabled = true;
   ui.authMessage.textContent = "照合しています…";
+  ui.authMessage.className = "form-message is-checking";
   ui.form.classList.remove("is-error");
+  const startedAt = performance.now();
   try {
     const result = await request("/api/unlock", {
       method: "POST",
       body: JSON.stringify({ password }),
     });
+    await wait(Math.max(0, 1200 - (performance.now() - startedAt)));
     token = result.token;
     showScreen("release");
   } catch (error) {
+    await wait(Math.max(0, 1200 - (performance.now() - startedAt)));
     ui.form.classList.add("is-error");
     ui.authMessage.className = "form-message is-error";
-    ui.authMessage.textContent = error.message;
+    ui.authMessage.textContent = error.message.includes("パスワード")
+      ? "パスワードが間違っています。"
+      : error.message;
   } finally {
     button.disabled = false;
   }
@@ -127,7 +151,7 @@ ui.printButton.addEventListener("click", async () => {
   }
 });
 
-ui.action.addEventListener("click", resetToLock);
+ui.action.addEventListener("click", resetToHome);
 
 request("/api/status")
   .then((status) => {

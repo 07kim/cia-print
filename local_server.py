@@ -208,7 +208,7 @@ class PrintHandler(SimpleHTTPRequestHandler):
             if path == "/api/unlock":
                 data = self.read_json()
                 if not constant_match(data.get("password", ""), CONFIG["access_password"]):
-                    self.send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "message": "パスワードが一致しません。"})
+                    self.send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "message": "パスワードが間違っています。"})
                     return
                 self.send_json(HTTPStatus.OK, {"ok": True, "token": issue_token()})
                 return

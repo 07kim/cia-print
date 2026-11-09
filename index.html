@@ -11,7 +11,20 @@
   <main class="terminal">
     <span class="visually-hidden" id="connection-label" aria-live="polite">Mac接続を確認中</span>
 
-    <section class="stage" id="lock-screen" aria-label="パスワード認証">
+    <section class="stage home-stage" id="home-screen" aria-label="プリンター ホーム">
+      <button class="home-action" id="home-action" type="button" aria-label="プリンターを使用する">
+        <span class="home-icon material-symbols-rounded" aria-hidden="true">print</span>
+        <span class="home-label">プリンター</span>
+        <span class="home-hint">タップして開始</span>
+      </button>
+    </section>
+
+    <section class="stage notice-stage" id="lock-notice-screen" hidden aria-live="polite">
+      <span class="hero-icon material-symbols-rounded" aria-hidden="true">lock</span>
+      <p>ロックがかかっています</p>
+    </section>
+
+    <section class="stage" id="lock-screen" hidden aria-label="パスワード認証">
       <span class="hero-icon material-symbols-rounded" aria-hidden="true">lock</span>
       <form class="auth-panel" id="auth-form">
         <label class="visually-hidden" for="password">パスワード</label>
