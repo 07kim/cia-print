@@ -13,6 +13,10 @@ iPadのブラウザから、印刷設定やOSの印刷ダイアログを表示�
 
 ## 起動
 
+Finderから`CIA Printを起動.command`をダブルクリックすると起動できます。
+
+ターミナルから起動する場合：
+
 ```sh
 npm run start:local
 ```
