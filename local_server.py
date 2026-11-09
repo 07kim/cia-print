@@ -7,6 +7,7 @@ import cgi
 import hmac
 import json
 import secrets
+import socket
 import subprocess
 import threading
 import time
@@ -28,6 +29,35 @@ DEFAULTS = {
     "admin_pin": "6340",
 }
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
+
+
+def local_ip_addresses() -> list[str]:
+    """Return usable LAN addresses without depending on a fixed Wi-Fi interface name."""
+    addresses: set[str] = set()
+    for interface in ("en0", "en1", "en2", "bridge100"):
+        try:
+            result = subprocess.run(
+                ["/usr/sbin/ipconfig", "getifaddr", interface],
+                capture_output=True,
+                text=True,
+                timeout=2,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                addresses.add(result.stdout.strip())
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+            probe.connect(("192.0.2.1", 80))
+            addresses.add(probe.getsockname()[0])
+    except OSError:
+        pass
+    try:
+        for result in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
+            addresses.add(result[4][0])
+    except OSError:
+        pass
+    return sorted(address for address in addresses if not address.startswith("127."))
 
 
 def load_config() -> dict:
@@ -255,9 +285,21 @@ def serve() -> None:
     host = str(CONFIG["host"])
     port = int(CONFIG["port"])
     server = ThreadingHTTPServer((host, port), PrintHandler)
-    print(f"CIA Print relay: http://localhost:{port}")
-    print(f"Printer: {CONFIG['printer_name']}")
-    print(f"Document: {document_path()}")
+    addresses = local_ip_addresses()
+    print("\n" + "=" * 64)
+    print(" CIA PRINT を起動しました")
+    print("=" * 64)
+    if addresses:
+        print("\n iPadのSafariに、次のURLをそのまま入力してください:\n")
+        for address in addresses:
+            print(f"   参加者画面  http://{address}:{port}/")
+            print(f"   管理画面    http://{address}:{port}/admin/\n")
+    else:
+        print("\n IPアドレスを取得できませんでした。MacのWi-Fi接続を確認してください。\n")
+    print(f" プリンター: {CONFIG['printer_name']}")
+    print(f" 印刷資料:   {document_path()}")
+    print("\n 終了するときは Control + C を押してください。")
+    print("=" * 64 + "\n", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
