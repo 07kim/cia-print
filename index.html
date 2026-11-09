@@ -19,13 +19,9 @@
       </button>
     </section>
 
-    <section class="stage notice-stage" id="lock-notice-screen" hidden aria-live="polite">
-      <span class="hero-icon material-symbols-rounded" aria-hidden="true">lock</span>
-      <p>ロックがかかっています</p>
-    </section>
-
-    <section class="stage" id="lock-screen" hidden aria-label="パスワード認証">
-      <span class="hero-icon material-symbols-rounded" aria-hidden="true">lock</span>
+    <section class="stage lock-stage" id="lock-screen" hidden aria-label="パスワード認証">
+      <span class="hero-icon lock-icon material-symbols-rounded" aria-hidden="true">lock</span>
+      <p class="lock-notice" aria-live="polite">ロックがかかっています</p>
       <form class="auth-panel" id="auth-form">
         <label class="visually-hidden" for="password">パスワード</label>
         <input id="password" name="password" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="auth-message" placeholder="パスワード">

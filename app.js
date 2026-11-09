@@ -1,7 +1,6 @@
 const ui = {
   home: document.querySelector("#home-screen"),
   homeAction: document.querySelector("#home-action"),
-  lockNotice: document.querySelector("#lock-notice-screen"),
   lock: document.querySelector("#lock-screen"),
   release: document.querySelector("#release-screen"),
   form: document.querySelector("#auth-form"),
@@ -24,8 +23,8 @@ let token = "";
 let resetSeconds = 20;
 let resetTimer = 0;
 let authorizationTimer = 0;
-const AUTH_CHECK_MINIMUM_MS = 1200;
-const CONNECTION_DISPLAY_MS = 5000;
+const AUTH_CHECK_MINIMUM_MS = 350;
+const CONNECTION_DISPLAY_MS = 200;
 const SENDING_DISPLAY_MS = 6000;
 
 const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
@@ -44,7 +43,6 @@ async function request(url, options = {}) {
 
 function showScreen(name) {
   ui.home.hidden = name !== "home";
-  ui.lockNotice.hidden = name !== "notice";
   ui.lock.hidden = name !== "lock";
   ui.release.hidden = name !== "release";
   ui.resultLayer.hidden = name !== "result";
@@ -53,7 +51,6 @@ function showScreen(name) {
 function screenElement(name) {
   return {
     home: ui.home,
-    notice: ui.lockNotice,
     lock: ui.lock,
     release: ui.release,
     result: ui.resultLayer,
@@ -62,7 +59,7 @@ function screenElement(name) {
 
 async function transitionTo(name) {
   const incoming = screenElement(name);
-  const outgoing = [ui.home, ui.lockNotice, ui.lock, ui.release, ui.resultLayer]
+  const outgoing = [ui.home, ui.lock, ui.release, ui.resultLayer]
     .find((element) => !element.hidden);
   if (!incoming || outgoing === incoming) return;
   if (reduceMotion.matches) {
@@ -97,6 +94,7 @@ async function resetToHome() {
   ui.authMessage.className = "form-message";
   ui.form.classList.remove("is-error");
   ui.form.classList.remove("is-checking");
+  ui.lock.classList.remove("is-input-ready");
   ui.printButton.disabled = false;
   await transitionTo("home");
   // The result layer must be hidden before its success/error styling is reset.
@@ -109,9 +107,9 @@ async function resetToHome() {
 async function openPasswordScreen() {
   if (ui.homeAction.disabled) return;
   ui.homeAction.disabled = true;
-  await transitionTo("notice");
-  await wait(450);
   await transitionTo("lock");
+  if (!reduceMotion.matches) await wait(40);
+  ui.lock.classList.add("is-input-ready");
   ui.homeAction.disabled = false;
 }
 
