@@ -1,8 +1,41 @@
-# CIA Print 運用セットアップ完全マニュアル
+# CIA Print 起動ガイド
 
 この文書だけで、初めて担当する人がGitHubからシステムを準備し、Mac・iPad・EPSON EW-M634Tを接続して印刷端末を立ち上げられることを目的とします。
 
-## まずはここだけ：最短起動手順
+## 担当別：ここだけ見ればOK
+
+### Mac担当者
+
+「ターミナル」を開き、次の1行を貼り付けてReturnキーを押します。初回も2回目以降も同じです。
+
+```sh
+cd ~/Desktop && if [ -d cia-print/.git ]; then git -C cia-print pull --ff-only; else git clone https://github.com/07kim/cia-print.git; fi && cd cia-print && ./scripts/start_local.sh
+```
+
+- 終了：`Control + C`
+
+### iPad担当者
+
+Macのターミナルに表示された「参加者画面」のURLをSafariへ入力します。
+
+```text
+参加者画面  http://192.168.75.237:8765/
+```
+
+数字は例を写さず、Macに表示されたURLを使ってください。
+
+### 管理担当者
+
+Macのターミナルに表示された「管理画面」のURLをSafariへ入力します。
+
+```text
+管理画面  http://192.168.75.237:8765/admin/
+```
+
+<details>
+<summary><strong>初回の接続設定・トラブル対応を見る</strong></summary>
+
+## 詳しい接続手順
 
 ### 1. 3台を同じWi-Fiへつなぐ
 
@@ -25,33 +58,17 @@
 
 ネットワーク名は`print`のような短い半角英字で構いません。EW-M634Tではパスワードを矢印キーで入力するため、長く複雑な文字列は当日の設定ミスにつながります。イベント専用テザリングでは、`qqqqqqqq`のように同じ半角英字を連続させた、入力しやすい8文字以上のパスワードがおすすめです。普段使用する個人用Wi-Fiや重要なネットワークでは、推測しやすいパスワードを使用しないでください。
 
-### 2. Macで「ターミナル」を開く
+### 2. Macで起動する
 
 `command + space`を押し、`ターミナル`と入力して開きます。
 
-次のコマンドを**1回コピーしてターミナルへ貼り付け、Returnキーを1回押します**。
-
-初回はGitHubから`cia-print`フォルダーを取得し、そのまま起動します。2回目以降は同じコマンドで最新版へ更新してから起動します。フォルダーの有無を自分で判断する必要はありません。
+上の「Mac担当者」にある1行を貼り付け、Returnキーを押します。
 
 ```sh
 cd ~/Desktop && if [ -d cia-print/.git ]; then git -C cia-print pull --ff-only; else git clone https://github.com/07kim/cia-print.git; fi && cd cia-print && ./scripts/start_local.sh
 ```
 
-実行後、起動に成功するとターミナルへ参加者画面と管理画面のURLが自動で表示されます。IPアドレスを別の操作で調べたり、URLを手作業で組み立てたりする必要はありません。
-
-すでに最新版があり、更新せず起動だけしたい場合は、次の1行でも起動できます。
-
-```sh
-cd ~/Desktop/cia-print && ./scripts/start_local.sh
-```
-
-#### 次回も同じ1行で起動できます
-
-次回以降も、最初と同じコマンドをターミナルへ貼り付けてReturnキーを押すだけです。更新があれば自動で取得し、そのままCIA Printを起動します。`CIA Printを起動.command`を探したり、ダブルクリックしたりする必要はありません。
-
-```sh
-cd ~/Desktop && if [ -d cia-print/.git ]; then git -C cia-print pull --ff-only; else git clone https://github.com/07kim/cia-print.git; fi && cd cia-print && ./scripts/start_local.sh
-```
+初回は取得、2回目以降は更新を自動で行います。`.command`ファイルの操作は不要です。
 
 ### 3. ターミナルに表示されたURLを見る
 
@@ -68,15 +85,7 @@ cd ~/Desktop && if [ -d cia-print/.git ]; then git -C cia-print pull --ff-only; 
    管理画面    http://192.168.75.237:8765/admin/
 ```
 
-この例では、iPadのSafariへ次を入力します。
-
-```text
-http://192.168.75.237:8765/
-```
-
-数字は例を写さず、必ずそのMacのターミナルに表示されたものを入力してください。`https`ではなく`http`です。末尾の`:8765/`も必要です。
-
-IPアドレスを自分でURLへ書き換える必要はありません。起動プログラムが、検出したIPアドレスを使って参加者画面と管理画面のURLを自動生成します。
+数字は例を写さず、必ずそのMacに表示されたURLを使います。
 
 ### 4. iPadで開く
 
@@ -88,9 +97,7 @@ IPアドレスを自分でURLへ書き換える必要はありません。起動
 
 ### 5. 終了する
 
-Macのターミナルで`Control + C`を押します。ターミナルのウィンドウを閉じるだけでも停止しますが、通常は`Control + C`を使用してください。
-
-うまく開かない場合は、最初にMacとiPadが同じWi-Fi名になっているか確認してください。その次に、ターミナルに表示されたURLをもう一度見直します。
+Macのターミナルで`Control + C`を押します。
 
 ---
 
@@ -267,3 +274,5 @@ Macで同じURLを開けるのにiPadだけ開けない場合は、ネットワ�
 2. 手動起動ならターミナルで`Control + C`を押す。
 3. iPadのSafariを閉じる。
 4. プリンターとテザリングを停止する。
+
+</details>
