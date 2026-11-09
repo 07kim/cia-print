@@ -45,17 +45,13 @@ cd ~/Desktop && if [ -d cia-print/.git ]; then git -C cia-print pull --ff-only; 
 cd ~/Desktop/cia-print && ./scripts/start_local.sh
 ```
 
-#### 次回からはダブルクリックだけで起動できます
+#### 次回も同じ1行で起動できます
 
-GitHubから取得した`cia-print`フォルダーの中にある、次のファイルをダブルクリックします。
+次回以降も、最初と同じコマンドをターミナルへ貼り付けてReturnキーを押すだけです。更新があれば自動で取得し、そのままCIA Printを起動します。`CIA Printを起動.command`を探したり、ダブルクリックしたりする必要はありません。
 
-```text
-CIA Printを起動.command
+```sh
+cd ~/Desktop && if [ -d cia-print/.git ]; then git -C cia-print pull --ff-only; else git clone https://github.com/07kim/cia-print.git; fi && cd cia-print && ./scripts/start_local.sh
 ```
-
-ターミナルが自動で開き、CIA Printが起動します。コマンド入力は不要です。
-
-初回にmacOSから開けないと表示された場合は、ファイルを右クリックして「開く」を選び、確認画面でもう一度「開く」を押してください。
 
 ### 3. ターミナルに表示されたURLを見る
 
