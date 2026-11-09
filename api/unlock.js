@@ -6,5 +6,5 @@ export default function handler(req, res) {
     return res.status(401).json({ ok: false, message: "パスワードが間違っています。" });
   }
   res.setHeader("Cache-Control", "no-store");
-  res.status(200).json({ ok: true, token: issueParticipantToken() });
+  res.status(200).json({ ok: true, token: issueParticipantToken(), expiresIn: 60 });
 }

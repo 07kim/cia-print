@@ -23,6 +23,7 @@ const ui = {
 let token = "";
 let resetSeconds = 20;
 let resetTimer = 0;
+let authorizationTimer = 0;
 
 const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -86,6 +87,7 @@ async function transitionTo(name) {
 
 async function resetToHome() {
   window.clearInterval(resetTimer);
+  window.clearTimeout(authorizationTimer);
   token = "";
   ui.password.value = "";
   ui.authMessage.textContent = "";
@@ -161,6 +163,10 @@ ui.form.addEventListener("submit", async (event) => {
     });
     await wait(Math.max(0, 1200 - (performance.now() - startedAt)));
     token = result.token;
+    window.clearTimeout(authorizationTimer);
+    authorizationTimer = window.setTimeout(() => {
+      if (token) resetToHome();
+    }, Math.max(1, Number(result.expiresIn) || 60) * 1000);
     await transitionTo("release");
   } catch (error) {
     await wait(Math.max(0, 1200 - (performance.now() - startedAt)));
@@ -184,6 +190,7 @@ ui.password.addEventListener("input", () => {
 
 ui.printButton.addEventListener("click", async () => {
   if (!token || ui.printButton.disabled) return;
+  window.clearTimeout(authorizationTimer);
   ui.printButton.disabled = true;
   await showResult("sending", "SENDING", "送信中", "プリンターへ送信しています。");
   try {

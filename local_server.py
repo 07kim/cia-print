@@ -6,6 +6,7 @@ from __future__ import annotations
 import cgi
 import hmac
 import json
+import re
 import secrets
 import socket
 import subprocess
@@ -29,6 +30,8 @@ DEFAULTS = {
     "admin_pin": "6340",
 }
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
+AUTHORIZATION_SECONDS = 60
+PRINT_JOB_MAX_AGE_SECONDS = 60
 
 
 def local_ip_addresses() -> list[str]:
@@ -70,7 +73,7 @@ def load_config() -> dict:
 CONFIG = load_config()
 PRINT_LOCK = threading.Lock()
 TOKEN_LOCK = threading.Lock()
-TOKENS: dict[str, float] = {}
+TOKENS: dict[str, tuple[float, str]] = {}
 LAST_PRINT_AT = 0.0
 
 
@@ -90,28 +93,76 @@ def document_path() -> Path:
 def clean_tokens() -> None:
     now = time.time()
     with TOKEN_LOCK:
-        expired = [token for token, expires in TOKENS.items() if expires <= now]
+        expired = [token for token, (expires, _) in TOKENS.items() if expires <= now]
         for token in expired:
             TOKENS.pop(token, None)
 
 
-def issue_token() -> str:
+def issue_token(client_address: str) -> str:
     clean_tokens()
     token = secrets.token_urlsafe(24)
     with TOKEN_LOCK:
-        TOKENS[token] = time.time() + 300
+        TOKENS[token] = (time.time() + AUTHORIZATION_SECONDS, client_address)
     return token
 
 
-def consume_token(token: str) -> bool:
+def consume_token(token: str, client_address: str) -> bool:
     clean_tokens()
     with TOKEN_LOCK:
-        expires = TOKENS.pop(token, None)
-    return bool(expires and expires > time.time())
+        authorization = TOKENS.pop(token, None)
+    if not authorization:
+        return False
+    expires, authorized_address = authorization
+    return expires > time.time() and constant_match(authorized_address, client_address)
 
 
 def constant_match(value: str, expected: str) -> bool:
     return hmac.compare_digest(str(value), str(expected))
+
+
+def clear_stale_print_jobs() -> None:
+    """Discard jobs left in CUPS before this event session starts."""
+    try:
+        result = subprocess.run(
+            ["cancel", "-a", str(CONFIG["printer_name"])],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            print(" 前回から残っていた印刷待ちを消去しました。")
+        else:
+            detail = (result.stderr or result.stdout).strip()
+            if detail:
+                print(f" 印刷待ちの確認: {detail}")
+    except (OSError, subprocess.TimeoutExpired) as error:
+        print(f" 印刷待ちを確認できませんでした: {error}")
+
+
+def cancel_print_job(job_id: str) -> None:
+    """Expire an unfinished CUPS job so it cannot print after a later reconnect."""
+    try:
+        subprocess.run(
+            ["cancel", job_id],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
+def expire_print_job_later(output: str) -> None:
+    match = re.search(r"request id is ([^\s]+)", output)
+    if not match:
+        return
+    timer = threading.Timer(
+        PRINT_JOB_MAX_AGE_SECONDS,
+        cancel_print_job,
+        args=(match.group(1),),
+    )
+    timer.daemon = True
+    timer.start()
 
 
 def run_print() -> tuple[bool, str, int]:
@@ -150,6 +201,7 @@ def run_print() -> tuple[bool, str, int]:
         if result.returncode != 0:
             detail = (result.stderr or result.stdout or "印刷命令が失敗しました").strip()
             return False, detail, 503
+        expire_print_job_later(result.stdout or "")
         LAST_PRINT_AT = time.time()
         return True, (result.stdout or "印刷を受け付けました").strip(), 200
 
@@ -220,13 +272,20 @@ class PrintHandler(SimpleHTTPRequestHandler):
                 if not constant_match(data.get("password", ""), CONFIG["access_password"]):
                     self.send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "message": "パスワードが間違っています。"})
                     return
-                self.send_json(HTTPStatus.OK, {"ok": True, "token": issue_token()})
+                self.send_json(
+                    HTTPStatus.OK,
+                    {
+                        "ok": True,
+                        "token": issue_token(self.client_address[0]),
+                        "expiresIn": AUTHORIZATION_SECONDS,
+                    },
+                )
                 return
 
             if path == "/api/print":
                 auth = self.headers.get("Authorization", "")
                 token = auth.removeprefix("Bearer ").strip()
-                if not consume_token(token):
+                if not consume_token(token, self.client_address[0]):
                     self.send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "message": "認証の有効期限が切れました。"})
                     return
                 ok, message, status = run_print()
@@ -294,6 +353,7 @@ class PrintHandler(SimpleHTTPRequestHandler):
 def serve() -> None:
     host = str(CONFIG["host"])
     port = int(CONFIG["port"])
+    clear_stale_print_jobs()
     server = ThreadingHTTPServer((host, port), PrintHandler)
     addresses = local_ip_addresses()
     print("\n" + "=" * 64)
