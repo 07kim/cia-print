@@ -26,7 +26,7 @@ DEFAULTS = {
     "printer_name": "EPSON_EW_M634T_Series",
     "pdf_path": "output/pdf/cia-print-a4-monochrome.pdf",
     "cooldown_seconds": 15,
-    "reset_seconds": 20,
+    "reset_seconds": 7,
     "access_password": "PRINT",
     "admin_pin": "6340",
 }

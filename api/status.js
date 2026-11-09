@@ -4,7 +4,7 @@ export default function handler(req, res) {
   res.status(200).json({
     ok: true,
     ready: true,
-    resetSeconds: 20,
+    resetSeconds: 7,
     onlinePreview: true,
   });
 }

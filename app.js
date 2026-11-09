@@ -20,7 +20,7 @@ const ui = {
 };
 
 let token = "";
-let resetSeconds = 20;
+let resetSeconds = 7;
 let resetTimer = 0;
 let authorizationTimer = 0;
 let lockIdleTimer = 0;
@@ -237,7 +237,7 @@ ui.action.addEventListener("click", resetToHome);
 
 request("/api/status")
   .then((status) => {
-    resetSeconds = Number(status.resetSeconds) || 20;
+    resetSeconds = Number(status.resetSeconds) || 7;
     ui.connection.textContent = status.ready ? "Mac・プリンター接続準備完了" : "印刷資料が未設定";
     document.body.classList.toggle("is-offline", !status.ready);
   })
