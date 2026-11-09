@@ -2,7 +2,7 @@
   "host": "0.0.0.0",
   "port": 8765,
   "printer_name": "EPSON_EW_M634T_Series",
-  "pdf_path": "assets/connection-test.pdf",
+  "pdf_path": "output/pdf/cia-print-a4-monochrome.pdf",
   "cooldown_seconds": 15,
   "reset_seconds": 20,
   "access_password": "PRINT",
