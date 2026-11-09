@@ -12,7 +12,9 @@ export function onlinePassword() {
 
 export function issueParticipantToken() {
   const payload = Buffer.from(
-    JSON.stringify({ expiresAt: Date.now() + 60 * 1000 }),
+    // Allow for the five-second connection presentation before the documented
+    // 60-second participant print window begins.
+    JSON.stringify({ expiresAt: Date.now() + 70 * 1000 }),
   ).toString("base64url");
   return `${payload}.${signature(payload)}`;
 }

@@ -3,7 +3,8 @@
 
 from __future__ import annotations
 
-import cgi
+from email.parser import BytesParser
+from email.policy import default as email_policy
 import hmac
 import json
 import re
@@ -30,7 +31,11 @@ DEFAULTS = {
     "admin_pin": "6340",
 }
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
-AUTHORIZATION_SECONDS = 60
+# The browser intentionally shows a five-second connection phase after unlock.
+# Keep a small server-only allowance so the participant still receives the full
+# documented 60-second print window after that presentation finishes.
+AUTHORIZATION_SECONDS = 70
+CLIENT_AUTHORIZATION_SECONDS = 60
 PRINT_JOB_MAX_AGE_SECONDS = 60
 
 
@@ -232,6 +237,28 @@ class PrintHandler(SimpleHTTPRequestHandler):
     def admin_allowed(self) -> bool:
         return constant_match(self.headers.get("X-Admin-PIN", ""), CONFIG["admin_pin"])
 
+    def read_uploaded_pdf(self) -> bytes:
+        """Read the admin PDF upload without the removed Python 3.13 cgi module."""
+        content_type = self.headers.get("Content-Type", "")
+        if not content_type.lower().startswith("multipart/form-data"):
+            raise ValueError("PDFを選択してください。")
+        length = int(self.headers.get("Content-Length", "0"))
+        if length <= 0 or length > MAX_UPLOAD_BYTES + 1024 * 1024:
+            raise ValueError("20MB以下のPDFを選択してください。")
+        body = self.rfile.read(length)
+        message = BytesParser(policy=email_policy).parsebytes(
+            f"Content-Type: {content_type}\r\nMIME-Version: 1.0\r\n\r\n".encode("utf-8") + body
+        )
+        if not message.is_multipart():
+            raise ValueError("PDFを選択してください。")
+        for part in message.iter_parts():
+            if part.get_param("name", header="content-disposition") == "document":
+                data = part.get_payload(decode=True) or b""
+                if len(data) > MAX_UPLOAD_BYTES or not data.startswith(b"%PDF-"):
+                    raise ValueError("20MB以下のPDFを選択してください。")
+                return data
+        raise ValueError("PDFを選択してください。")
+
     def do_GET(self) -> None:
         path = urlparse(self.path).path
         if path == "/api/status":
@@ -277,7 +304,7 @@ class PrintHandler(SimpleHTTPRequestHandler):
                     {
                         "ok": True,
                         "token": issue_token(self.client_address[0]),
-                        "expiresIn": AUTHORIZATION_SECONDS,
+                        "expiresIn": CLIENT_AUTHORIZATION_SECONDS,
                     },
                 )
                 return
@@ -313,19 +340,7 @@ class PrintHandler(SimpleHTTPRequestHandler):
                 if not self.admin_allowed():
                     self.send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "message": "管理者PINが違います。"})
                     return
-                form = cgi.FieldStorage(
-                    fp=self.rfile,
-                    headers=self.headers,
-                    environ={"REQUEST_METHOD": "POST", "CONTENT_TYPE": self.headers.get("Content-Type", "")},
-                )
-                upload = form["document"] if "document" in form else None
-                if upload is None or not getattr(upload, "file", None):
-                    self.send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "message": "PDFを選択してください。"})
-                    return
-                data = upload.file.read(MAX_UPLOAD_BYTES + 1)
-                if len(data) > MAX_UPLOAD_BYTES or not data.startswith(b"%PDF-"):
-                    self.send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "message": "20MB以下のPDFを選択してください。"})
-                    return
+                data = self.read_uploaded_pdf()
                 target = ROOT / "assets" / "print-document.pdf"
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(data)

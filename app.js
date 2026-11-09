@@ -24,6 +24,9 @@ let token = "";
 let resetSeconds = 20;
 let resetTimer = 0;
 let authorizationTimer = 0;
+const AUTH_CHECK_MINIMUM_MS = 1200;
+const CONNECTION_DISPLAY_MS = 5000;
+const SENDING_DISPLAY_MS = 6000;
 
 const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -95,17 +98,19 @@ async function resetToHome() {
   ui.form.classList.remove("is-error");
   ui.form.classList.remove("is-checking");
   ui.printButton.disabled = false;
+  await transitionTo("home");
+  // The result layer must be hidden before its success/error styling is reset.
+  // Resetting it while visible caused a brief red card flash during the return home.
   ui.resultCard.className = "result-card";
   ui.action.hidden = true;
   ui.countdown.textContent = "";
-  await transitionTo("home");
 }
 
 async function openPasswordScreen() {
   if (ui.homeAction.disabled) return;
   ui.homeAction.disabled = true;
   await transitionTo("notice");
-  await wait(1100);
+  await wait(450);
   await transitionTo("lock");
   ui.homeAction.disabled = false;
 }
@@ -132,10 +137,10 @@ async function showResult(kind, kicker, title, detail) {
 
 function beginResetCountdown() {
   let remaining = resetSeconds;
-  ui.countdown.textContent = `${remaining}秒後にロック画面へ戻ります`;
+  ui.countdown.textContent = `${remaining}秒後にプリンター画面へ戻ります`;
   resetTimer = window.setInterval(() => {
     remaining -= 1;
-    ui.countdown.textContent = `${remaining}秒後にロック画面へ戻ります`;
+    ui.countdown.textContent = `${remaining}秒後にプリンター画面へ戻ります`;
     if (remaining <= 0) resetToHome();
   }, 1000);
 }
@@ -161,7 +166,9 @@ ui.form.addEventListener("submit", async (event) => {
       method: "POST",
       body: JSON.stringify({ password }),
     });
-    await wait(Math.max(0, 1200 - (performance.now() - startedAt)));
+    await wait(Math.max(0, AUTH_CHECK_MINIMUM_MS - (performance.now() - startedAt)));
+    ui.authMessage.textContent = "プリンターに接続しています…";
+    await wait(CONNECTION_DISPLAY_MS);
     token = result.token;
     window.clearTimeout(authorizationTimer);
     authorizationTimer = window.setTimeout(() => {
@@ -169,7 +176,7 @@ ui.form.addEventListener("submit", async (event) => {
     }, Math.max(1, Number(result.expiresIn) || 60) * 1000);
     await transitionTo("release");
   } catch (error) {
-    await wait(Math.max(0, 1200 - (performance.now() - startedAt)));
+    await wait(Math.max(0, AUTH_CHECK_MINIMUM_MS - (performance.now() - startedAt)));
     ui.form.classList.add("is-error");
     ui.authMessage.className = "form-message is-error";
     ui.authMessage.textContent = error.message.includes("パスワード")
@@ -192,6 +199,7 @@ ui.printButton.addEventListener("click", async () => {
   if (!token || ui.printButton.disabled) return;
   window.clearTimeout(authorizationTimer);
   ui.printButton.disabled = true;
+  const sendingStartedAt = performance.now();
   await showResult("sending", "SENDING", "送信中", "プリンターへ送信しています。");
   try {
     const result = await request("/api/print", {
@@ -199,11 +207,10 @@ ui.printButton.addEventListener("click", async () => {
       headers: { Authorization: `Bearer ${token}` },
     });
     token = "";
-    window.setTimeout(async () => {
-      await showResult("success", "ACCEPTED", "受付完了", "そのままお待ちください。");
-      ui.action.hidden = false;
-      beginResetCountdown();
-    }, 850);
+    await wait(Math.max(0, SENDING_DISPLAY_MS - (performance.now() - sendingStartedAt)));
+    await showResult("success", "ACCEPTED", "受付完了", "そのままお待ちください。");
+    ui.action.hidden = false;
+    beginResetCountdown();
   } catch (error) {
     token = "";
     await showResult("error", "OUTPUT ERROR", "印刷できませんでした", error.message);
