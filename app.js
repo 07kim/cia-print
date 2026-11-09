@@ -27,7 +27,7 @@ let lockIdleTimer = 0;
 const AUTH_CHECK_MINIMUM_MS = 350;
 const CONNECTION_DISPLAY_MS = 200;
 const SENDING_DISPLAY_MS = 6000;
-const LOCK_IDLE_TIMEOUT_MS = 20000;
+const LOCK_IDLE_TIMEOUT_MS = 8000;
 
 const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
