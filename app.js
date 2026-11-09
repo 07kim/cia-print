@@ -23,9 +23,11 @@ let token = "";
 let resetSeconds = 20;
 let resetTimer = 0;
 let authorizationTimer = 0;
+let lockIdleTimer = 0;
 const AUTH_CHECK_MINIMUM_MS = 350;
 const CONNECTION_DISPLAY_MS = 200;
 const SENDING_DISPLAY_MS = 6000;
+const LOCK_IDLE_TIMEOUT_MS = 20000;
 
 const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -88,6 +90,7 @@ async function transitionTo(name) {
 async function resetToHome() {
   window.clearInterval(resetTimer);
   window.clearTimeout(authorizationTimer);
+  window.clearTimeout(lockIdleTimer);
   token = "";
   ui.password.value = "";
   ui.authMessage.textContent = "";
@@ -104,12 +107,20 @@ async function resetToHome() {
   ui.countdown.textContent = "";
 }
 
+function restartLockIdleTimer() {
+  window.clearTimeout(lockIdleTimer);
+  lockIdleTimer = window.setTimeout(() => {
+    if (!ui.lock.hidden) resetToHome();
+  }, LOCK_IDLE_TIMEOUT_MS);
+}
+
 async function openPasswordScreen() {
   if (ui.homeAction.disabled) return;
   ui.homeAction.disabled = true;
   await transitionTo("lock");
   if (!reduceMotion.matches) await wait(40);
   ui.lock.classList.add("is-input-ready");
+  restartLockIdleTimer();
   ui.homeAction.disabled = false;
 }
 
@@ -152,6 +163,7 @@ ui.form.addEventListener("submit", async (event) => {
     ui.authMessage.textContent = "パスワードを入力してください。";
     return;
   }
+  window.clearTimeout(lockIdleTimer);
   const button = ui.form.querySelector("button");
   button.disabled = true;
   ui.authMessage.textContent = "照合しています…";
@@ -180,6 +192,7 @@ ui.form.addEventListener("submit", async (event) => {
     ui.authMessage.textContent = error.message.includes("パスワード")
       ? "パスワードが間違っています。"
       : error.message;
+    restartLockIdleTimer();
   } finally {
     ui.form.classList.remove("is-checking");
     button.disabled = false;
@@ -187,11 +200,15 @@ ui.form.addEventListener("submit", async (event) => {
 });
 
 ui.password.addEventListener("input", () => {
+  restartLockIdleTimer();
   ui.form.classList.remove("is-error");
   ui.form.classList.remove("is-checking");
   ui.authMessage.className = "form-message";
   ui.authMessage.textContent = "";
 });
+
+ui.lock.addEventListener("pointerdown", restartLockIdleTimer);
+ui.lock.addEventListener("keydown", restartLockIdleTimer);
 
 ui.printButton.addEventListener("click", async () => {
   if (!token || ui.printButton.disabled) return;
