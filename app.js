@@ -91,6 +91,7 @@ async function resetToHome() {
   ui.authMessage.textContent = "";
   ui.authMessage.className = "form-message";
   ui.form.classList.remove("is-error");
+  ui.form.classList.remove("is-checking");
   ui.printButton.disabled = false;
   ui.resultCard.className = "result-card";
   ui.action.hidden = true;
@@ -151,6 +152,7 @@ ui.form.addEventListener("submit", async (event) => {
   ui.authMessage.textContent = "照合しています…";
   ui.authMessage.className = "form-message is-checking";
   ui.form.classList.remove("is-error");
+  ui.form.classList.add("is-checking");
   const startedAt = performance.now();
   try {
     const result = await request("/api/unlock", {
@@ -168,12 +170,14 @@ ui.form.addEventListener("submit", async (event) => {
       ? "パスワードが間違っています。"
       : error.message;
   } finally {
+    ui.form.classList.remove("is-checking");
     button.disabled = false;
   }
 });
 
 ui.password.addEventListener("input", () => {
   ui.form.classList.remove("is-error");
+  ui.form.classList.remove("is-checking");
   ui.authMessage.className = "form-message";
   ui.authMessage.textContent = "";
 });
