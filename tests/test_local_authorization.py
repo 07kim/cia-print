@@ -33,7 +33,15 @@ class PrintAuthorizationTests(unittest.TestCase):
         self.assertFalse(local_server.consume_token(token, "192.168.1.20"))
 
 
-class PdfUploadTests(unittest.TestCase):
+class AdminEntryTests(unittest.TestCase):
+    def test_admin_password_opens_admin_without_changing_print_password(self):
+        with patch.dict(local_server.CONFIG, {"access_password": "PRINT"}):
+            self.assertEqual(local_server.unlock_destination("admin0000"), "admin")
+            self.assertEqual(local_server.unlock_destination("PRINT"), "print")
+            self.assertIsNone(local_server.unlock_destination("wrong"))
+
+
+class DocumentUploadTests(unittest.TestCase):
     def test_multipart_pdf_upload_works_without_cgi_module(self):
         boundary = "cia-print-test-boundary"
         pdf = b"%PDF-1.4\nCIA Print test\n%%EOF\n"
@@ -49,7 +57,24 @@ class PdfUploadTests(unittest.TestCase):
         handler.headers = headers
         handler.rfile = BytesIO(body)
 
-        self.assertEqual(handler.read_uploaded_pdf(), pdf)
+        self.assertEqual(handler.read_uploaded_document(), (pdf, ".pdf"))
+
+    def test_png_photo_upload_is_accepted(self):
+        boundary = "cia-print-photo-boundary"
+        photo = b"\x89PNG\r\n\x1a\nCIA Print photo"
+        body = (
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="document"; filename="photo.png"\r\n'
+            "Content-Type: image/png\r\n\r\n"
+        ).encode("utf-8") + photo + f"\r\n--{boundary}--\r\n".encode("utf-8")
+        headers = Message()
+        headers["Content-Type"] = f"multipart/form-data; boundary={boundary}"
+        headers["Content-Length"] = str(len(body))
+        handler = local_server.PrintHandler.__new__(local_server.PrintHandler)
+        handler.headers = headers
+        handler.rfile = BytesIO(body)
+
+        self.assertEqual(handler.read_uploaded_document(), (photo, ".png"))
 
 
 class PrinterStatusTests(unittest.TestCase):

@@ -177,6 +177,10 @@ ui.form.addEventListener("submit", async (event) => {
       body: JSON.stringify({ password }),
     });
     await wait(Math.max(0, AUTH_CHECK_MINIMUM_MS - (performance.now() - startedAt)));
+    if (result.admin) {
+      window.location.assign("/admin/");
+      return;
+    }
     ui.authMessage.textContent = "プリンターに接続しています…";
     await wait(CONNECTION_DISPLAY_MS);
     token = result.token;

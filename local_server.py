@@ -30,8 +30,8 @@ DEFAULTS = {
     "cooldown_seconds": 15,
     "reset_seconds": 7,
     "access_password": "PRINT",
-    "admin_pin": "6340",
 }
+ADMIN_ENTRY_PASSWORD = "admin0000"
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 # The browser intentionally shows a five-second connection phase after unlock.
 # Keep a small server-only allowance so the participant still receives the full
@@ -140,6 +140,15 @@ def consume_token(token: str, client_address: str) -> bool:
 
 def constant_match(value: str, expected: str) -> bool:
     return hmac.compare_digest(str(value), str(expected))
+
+
+def unlock_destination(password: str) -> str | None:
+    """Return the presentation destination for a submitted password."""
+    if constant_match(password, ADMIN_ENTRY_PASSWORD):
+        return "admin"
+    if constant_match(password, CONFIG["access_password"]):
+        return "print"
+    return None
 
 
 def clear_stale_print_jobs() -> None:
@@ -312,30 +321,33 @@ class PrintHandler(SimpleHTTPRequestHandler):
         raw = self.rfile.read(length) if length else b"{}"
         return json.loads(raw.decode("utf-8"))
 
-    def admin_allowed(self) -> bool:
-        return constant_match(self.headers.get("X-Admin-PIN", ""), CONFIG["admin_pin"])
-
-    def read_uploaded_pdf(self) -> bytes:
-        """Read the admin PDF upload without the removed Python 3.13 cgi module."""
+    def read_uploaded_document(self) -> tuple[bytes, str]:
+        """Read an uploaded PDF or photo without the removed Python 3.13 cgi module."""
         content_type = self.headers.get("Content-Type", "")
         if not content_type.lower().startswith("multipart/form-data"):
-            raise ValueError("PDFを選択してください。")
+            raise ValueError("PDFまたは写真を選択してください。")
         length = int(self.headers.get("Content-Length", "0"))
         if length <= 0 or length > MAX_UPLOAD_BYTES + 1024 * 1024:
-            raise ValueError("20MB以下のPDFを選択してください。")
+            raise ValueError("20MB以下のPDFまたは写真を選択してください。")
         body = self.rfile.read(length)
         message = BytesParser(policy=email_policy).parsebytes(
             f"Content-Type: {content_type}\r\nMIME-Version: 1.0\r\n\r\n".encode("utf-8") + body
         )
         if not message.is_multipart():
-            raise ValueError("PDFを選択してください。")
+            raise ValueError("PDFまたは写真を選択してください。")
         for part in message.iter_parts():
             if part.get_param("name", header="content-disposition") == "document":
                 data = part.get_payload(decode=True) or b""
-                if len(data) > MAX_UPLOAD_BYTES or not data.startswith(b"%PDF-"):
-                    raise ValueError("20MB以下のPDFを選択してください。")
-                return data
-        raise ValueError("PDFを選択してください。")
+                if len(data) > MAX_UPLOAD_BYTES:
+                    raise ValueError("20MB以下のPDFまたは写真を選択してください。")
+                if data.startswith(b"%PDF-"):
+                    return data, ".pdf"
+                if data.startswith(b"\x89PNG\r\n\x1a\n"):
+                    return data, ".png"
+                if data.startswith(b"\xff\xd8\xff"):
+                    return data, ".jpg"
+                raise ValueError("PDF、PNG、JPEGのいずれかを選択してください。")
+        raise ValueError("PDFまたは写真を選択してください。")
 
     def do_GET(self) -> None:
         path = urlparse(self.path).path
@@ -356,9 +368,6 @@ class PrintHandler(SimpleHTTPRequestHandler):
             )
             return
         if path == "/api/admin/config":
-            if not self.admin_allowed():
-                self.send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "message": "管理者PINが違います。"})
-                return
             self.send_json(
                 HTTPStatus.OK,
                 {
@@ -378,7 +387,11 @@ class PrintHandler(SimpleHTTPRequestHandler):
         try:
             if path == "/api/unlock":
                 data = self.read_json()
-                if not constant_match(data.get("password", ""), CONFIG["access_password"]):
+                destination = unlock_destination(data.get("password", ""))
+                if destination == "admin":
+                    self.send_json(HTTPStatus.OK, {"ok": True, "admin": True})
+                    return
+                if destination != "print":
                     self.send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "message": "パスワードが間違っています。"})
                     return
                 self.send_json(
@@ -402,16 +415,11 @@ class PrintHandler(SimpleHTTPRequestHandler):
                 return
 
             if path == "/api/admin/config":
-                if not self.admin_allowed():
-                    self.send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "message": "管理者PINが違います。"})
-                    return
                 data = self.read_json()
                 if data.get("accessPassword"):
                     CONFIG["access_password"] = str(data["accessPassword"])
                 if data.get("printerName"):
                     CONFIG["printer_name"] = str(data["printerName"])
-                if data.get("adminPin"):
-                    CONFIG["admin_pin"] = str(data["adminPin"])
                 CONFIG["cooldown_seconds"] = max(0, min(300, int(data.get("cooldownSeconds", CONFIG["cooldown_seconds"]))))
                 CONFIG["reset_seconds"] = max(5, min(300, int(data.get("resetSeconds", CONFIG["reset_seconds"]))))
                 save_config()
@@ -419,11 +427,8 @@ class PrintHandler(SimpleHTTPRequestHandler):
                 return
 
             if path == "/api/admin/upload":
-                if not self.admin_allowed():
-                    self.send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "message": "管理者PINが違います。"})
-                    return
-                data = self.read_uploaded_pdf()
-                target = ROOT / "assets" / "print-document.pdf"
+                data, suffix = self.read_uploaded_document()
+                target = ROOT / "assets" / f"print-document{suffix}"
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(data)
                 CONFIG["pdf_path"] = str(target.relative_to(ROOT))
@@ -432,9 +437,6 @@ class PrintHandler(SimpleHTTPRequestHandler):
                 return
 
             if path == "/api/admin/print":
-                if not self.admin_allowed():
-                    self.send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "message": "管理者PINが違います。"})
-                    return
                 ok, message, status = run_print()
                 self.send_json(status, {"ok": ok, "message": message})
                 return

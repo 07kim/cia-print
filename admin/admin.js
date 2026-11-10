@@ -1,18 +1,16 @@
 const $ = (selector) => document.querySelector(selector);
 const ui = {
-  login: $("#login"), dashboard: $("#dashboard"), loginForm: $("#login-form"),
-  pin: $("#pin"), loginMessage: $("#login-message"), dashboardMessage: $("#dashboard-message"),
+  dashboard: $("#dashboard"), dashboardMessage: $("#dashboard-message"),
   status: $("#status-copy"), settingsForm: $("#settings-form"), uploadForm: $("#upload-form"),
   password: $("#access-password"), printer: $("#printer-name"), reset: $("#reset-seconds"),
-  cooldown: $("#cooldown-seconds"), newPin: $("#new-pin"), documentName: $("#document-name"),
+  cooldown: $("#cooldown-seconds"), documentName: $("#document-name"),
   file: $("#document-file"), reprint: $("#reprint"),
 };
-let adminPin = "";
 
 async function api(url, options = {}) {
   const response = await fetch(url, {
     cache: "no-store", ...options,
-    headers: { "X-Admin-PIN": adminPin, ...options.headers },
+    headers: { ...options.headers },
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok || data.ok === false) throw new Error(data.message || "処理に失敗しました。");
@@ -32,25 +30,12 @@ async function loadDashboard() {
   ui.cooldown.value = config.cooldownSeconds;
   ui.documentName.textContent = config.documentName;
   ui.status.textContent = `${config.printerName} / ${config.documentName}`;
-  ui.login.hidden = true;
-  ui.dashboard.hidden = false;
 }
-
-ui.loginForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  adminPin = ui.pin.value.trim();
-  try {
-    await loadDashboard();
-  } catch (error) {
-    ui.loginMessage.textContent = error.message;
-  }
-});
 
 ui.settingsForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   message("保存しています…");
   try {
-    const nextPin = ui.newPin.value.trim();
     const result = await api("/api/admin/config", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -59,11 +44,8 @@ ui.settingsForm.addEventListener("submit", async (event) => {
         printerName: ui.printer.value.trim(),
         resetSeconds: Number(ui.reset.value),
         cooldownSeconds: Number(ui.cooldown.value),
-        adminPin: nextPin || undefined,
       }),
     });
-    if (nextPin) adminPin = nextPin;
-    ui.newPin.value = "";
     message(result.message);
   } catch (error) { message(error.message, true); }
 });
@@ -72,7 +54,7 @@ ui.uploadForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const body = new FormData();
   body.append("document", ui.file.files[0]);
-  message("PDFを保存しています…");
+  message("印刷資料を保存しています…");
   try {
     const result = await api("/api/admin/upload", { method: "POST", body });
     message(result.message);
@@ -91,3 +73,5 @@ ui.reprint.addEventListener("click", async () => {
   } catch (error) { message(error.message, true); }
   finally { ui.reprint.disabled = false; }
 });
+
+loadDashboard().catch((error) => message(error.message, true));

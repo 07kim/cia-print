@@ -14,17 +14,7 @@
       <a class="participant-link" href="/"><span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>参加者画面</a>
     </header>
 
-    <section class="login" id="login">
-      <div class="section-icon" aria-hidden="true"><span class="material-symbols-rounded">lock</span></div>
-      <div class="login-copy"><p class="eyebrow">ADMIN ACCESS</p><h2>管理者PIN</h2><p>端末設定と印刷資料を管理します。</p></div>
-      <form id="login-form" class="login-form">
-        <label for="pin">PIN</label>
-        <div class="inline-control"><input id="pin" type="password" inputmode="numeric" autocomplete="off" aria-describedby="login-message"><button type="submit">開く</button></div>
-      </form>
-      <p id="login-message" class="message" aria-live="polite"></p>
-    </section>
-
-    <div id="dashboard" hidden>
+    <div id="dashboard">
       <section class="status" aria-label="接続状態">
         <span class="material-symbols-rounded status-icon" aria-hidden="true">wifi</span>
         <div><strong>ローカル印刷サーバー</strong><small id="status-copy">状態を確認中</small></div>
@@ -37,7 +27,6 @@
             <label>プリンター名<input id="printer-name" required></label>
             <label>印刷後に戻る秒数<input id="reset-seconds" type="number" min="5" max="300" required></label>
             <label>連続印刷の待機秒数<input id="cooldown-seconds" type="number" min="0" max="300" required></label>
-            <label>新しい管理者PIN（変更時のみ）<input id="new-pin" type="password" inputmode="numeric"></label>
             <button type="submit"><span class="material-symbols-rounded" aria-hidden="true">check_circle</span>設定を保存</button>
           </form>
         </section>
@@ -45,8 +34,8 @@
           <div class="section-heading"><span class="material-symbols-rounded" aria-hidden="true">description</span><div><p class="eyebrow">DOCUMENT</p><h2>印刷資料</h2></div></div>
           <p class="document-name"><span>現在の資料</span><strong id="document-name">-</strong></p>
           <form id="upload-form" class="upload">
-            <label>差し替えるPDF<input id="document-file" type="file" accept="application/pdf" required></label>
-            <button type="submit"><span class="material-symbols-rounded" aria-hidden="true">upload_file</span>PDFを差し替える</button>
+            <label>差し替える写真またはPDF<input id="document-file" type="file" accept="application/pdf,image/png,image/jpeg" required></label>
+            <button type="submit"><span class="material-symbols-rounded" aria-hidden="true">upload_file</span>印刷資料を差し替える</button>
           </form>
           <div class="reprint-area">
             <div><h3>管理者再印刷</h3><p>現在の固定資料を1部送信します。</p></div>
