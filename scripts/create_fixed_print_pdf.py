@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PIL import Image, ImageOps
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = Path("/Users/mayugeyasai/Documents/学友/コンポ 2/黒背景_00003.png")
+SOURCE = ROOT / "assets" / "evidence-print-source.png"
 OUTPUT = ROOT / "output" / "pdf" / "cia-print-a4-monochrome.pdf"
 TEMP = ROOT / "tmp" / "pdfs" / "cia-print-a4-monochrome.png"
 
