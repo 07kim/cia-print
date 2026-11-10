@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start:local": "python3 local_server.py",
-    "check": "node --check app.js && node --check admin/admin.js && python3 -m py_compile local_server.py && python3 -m unittest discover -s tests"
+    "check": "node --check app.js && node --check admin/admin.js && node tests/test_online_unlock.mjs && python3 -m py_compile local_server.py && python3 -m unittest discover -s tests"
   }
 }
 
