@@ -29,7 +29,7 @@ DEFAULTS = {
     "pdf_path": "output/pdf/cia-print-a4-monochrome.pdf",
     "cooldown_seconds": 15,
     "reset_seconds": 7,
-    "access_password": "PRINT",
+    "access_password": "いんさつ",
 }
 ADMIN_ENTRY_PASSWORD = "admin0000"
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
