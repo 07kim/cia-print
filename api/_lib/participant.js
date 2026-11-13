@@ -7,7 +7,7 @@ function signature(payload) {
 }
 
 export function onlinePassword() {
-  return process.env.ACCESS_PASSWORD || "PRINT";
+  return process.env.ACCESS_PASSWORD || "いんさつ";
 }
 
 export function issueParticipantToken() {
