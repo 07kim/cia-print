@@ -19,18 +19,29 @@
       </button>
     </section>
 
-    <section class="stage lock-stage" id="lock-screen" hidden aria-label="パスワード認証">
+
+<section class="stage lock-stage" id="lock-screen" hidden aria-label="パスワード認証">
+  <div class="lock-layout">
+    <div class="lock-image">
+      <img src="/assets/puzzle.png" alt="謎解き画像">
+    </div>
+
+    <div class="lock-content">
       <span class="hero-icon lock-icon material-symbols-rounded" aria-hidden="true">lock</span>
       <p class="lock-notice" aria-live="polite">ロックがかかっています</p>
+
       <form class="auth-panel" id="auth-form">
         <label class="visually-hidden" for="password">パスワード</label>
         <input id="password" name="password" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="auth-message" placeholder="パスワード">
-        <button type="submit" aria-label="認証する"><span class="material-symbols-rounded" aria-hidden="true">check_circle</span></button>
+        <button type="submit" aria-label="認証する">
+          <span class="material-symbols-rounded" aria-hidden="true">check_circle</span>
+        </button>
         <p class="form-message" id="auth-message" aria-live="polite"></p>
         <div class="auth-progress" aria-hidden="true"><i></i></div>
       </form>
-    </section>
-
+    </div>
+  </div>
+</section>
     <section class="stage release-stage" id="release-screen" hidden aria-label="印刷">
       <span class="hero-icon success material-symbols-rounded" aria-hidden="true">description</span>
       <button class="print-button" id="print-button" type="button"><span class="material-symbols-rounded" aria-hidden="true">print</span><span>印刷</span></button>
