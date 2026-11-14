@@ -20,6 +20,8 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
+import network_diagnostics
+
 ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = ROOT / "local-config.json"
 DEFAULTS = {
@@ -57,32 +59,8 @@ def is_usable_lan_address(address: str) -> bool:
 
 
 def local_ip_addresses() -> list[str]:
-    """Return usable LAN addresses without depending on a fixed Wi-Fi interface name."""
-    addresses: set[str] = set()
-    for interface in ("en0", "en1", "en2", "bridge100"):
-        try:
-            result = subprocess.run(
-                ["/usr/sbin/ipconfig", "getifaddr", interface],
-                capture_output=True,
-                text=True,
-                timeout=2,
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                addresses.add(result.stdout.strip())
-        except (OSError, subprocess.TimeoutExpired):
-            pass
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
-            probe.connect(("192.0.2.1", 80))
-            addresses.add(probe.getsockname()[0])
-    except OSError:
-        pass
-    try:
-        for result in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
-            addresses.add(result[4][0])
-    except OSError:
-        pass
-    return sorted(address for address in addresses if is_usable_lan_address(address))
+    """Report only candidate RFC1918 LAN addresses, never CLAT 192.0.0.2."""
+    return network_diagnostics.inspect_network()["usable"]
 
 
 def load_config() -> dict:
@@ -458,25 +436,17 @@ def serve() -> None:
         server = ThreadingHTTPServer((host, port), PrintHandler)
     except OSError as error:
         if error.errno == errno.EADDRINUSE:
-            print("\n CIA Printはすでに起動しています。")
-            addresses = local_ip_addresses()
-            for address in addresses:
-                print(f" 参加者画面  http://{address}:{port}/")
-                print(f" 管理画面    http://{address}:{port}/admin/")
-            print()
+            print("\n ポートはすでに使用されています。CIA Printが起動中か確認してください。")
+            print(" lsof -nP -iTCP:" + str(port) + " -sTCP:LISTEN")
+            print(" CIA Printが正常稼働しているか、Macのブラウザで確認してください。")
+            print(f" http://127.0.0.1:{port}/api/status")
             return
         raise
-    addresses = local_ip_addresses()
+    report = network_diagnostics.inspect_network()
     print("\n" + "=" * 64)
     print(" CIA PRINT を起動しました")
     print("=" * 64)
-    if addresses:
-        print("\n iPadのSafariに、次のURLをそのまま入力してください:\n")
-        for address in addresses:
-            print(f"   参加者画面  http://{address}:{port}/")
-            print(f"   管理画面    http://{address}:{port}/admin/\n")
-    else:
-        print("\n IPアドレスを取得できませんでした。MacのWi-Fi接続を確認してください。\n")
+    print(network_diagnostics.format_guidance(report, port))
     print(f" プリンター: {CONFIG['printer_name']}")
     print(f" 印刷資料:   {document_path()}")
     print("\n 終了するときは Control + C を押してください。")
