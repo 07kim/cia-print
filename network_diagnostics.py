@@ -60,7 +60,7 @@ def classify_ipv4(address: str) -> str:
         return "invalid"
     if addr in CLAT:
         return "clat"
-    if addr in LAN:
+    if any(addr in network for network in LAN):
         return "lan"
     if addr in LINK_LOCAL:
         return "link_local"
