@@ -9,7 +9,7 @@ def sample_report(**overrides):
     data = {
         "interfaces": {},
         "addresses": {
-            "lan": [], "clat": [], "link_local": [], "loopback": [],
+            "lan": [], "shared": [], "clat": [], "link_local": [], "loopback": [],
             "other": [], "invalid": [],
         },
         "usable": [],
@@ -32,6 +32,39 @@ class NetworkDiagnosticsTests(unittest.TestCase):
         for address in ("10.2.3.4", "172.20.10.14", "192.168.75.2"):
             with self.subTest(address=address):
                 self.assertEqual(nd.classify_ipv4(address), "lan")
+
+    def test_carrier_shared_tethering_range(self):
+        self.assertEqual(nd.classify_ipv4("100.64.1.2"), "shared")
+        self.assertEqual(nd.classify_ipv4("100.127.255.254"), "shared")
+        self.assertEqual(nd.classify_ipv4("100.128.0.1"), "other")
+
+    def test_inactive_and_virtual_interfaces_not_offered(self):
+        raw = (
+            "en0: flags=8863<UP,BROADCAST,RUNNING> mtu 1500\n"
+            "\tinet 172.20.10.14 netmask 0xfffffff0\n"
+            "en9: flags=8822<BROADCAST,RUNNING> mtu 1500\n"
+            "\tinet 192.168.43.3 netmask 0xffffff00\n"
+            "utun0: flags=8051<UP,POINTOPOINT,RUNNING> mtu 1380\n"
+            "\tinet 10.8.0.2 netmask 0xffffff00\n"
+        )
+        def fake_run(command):
+            if command[:2] == ["/sbin/ifconfig", "-a"]:
+                return raw
+            return ""
+        with patch.object(nd, "run_readonly", side_effect=fake_run), \
+             patch.object(nd.socket, "socket", side_effect=OSError("offline")):
+            report = nd.inspect_network()
+        self.assertEqual(report["usable"], ["172.20.10.14"])
+
+    def test_shared_address_has_candidate_url_and_warning(self):
+        types = {
+            "lan": [], "shared": ["100.66.1.2"], "clat": [],
+            "link_local": [], "loopback": [], "other": [], "invalid": [],
+        }
+        report = sample_report(addresses=types, usable=["100.66.1.2"])
+        output = nd.format_guidance(report, 8765)
+        self.assertIn("http://100.66.1.2:8765/", output)
+        self.assertIn("共有アドレス", output)
 
     def test_classifies_android_hotspot(self):
         self.assertEqual(nd.classify_ipv4("192.168.43.20"), "lan")
@@ -84,7 +117,7 @@ class NetworkDiagnosticsTests(unittest.TestCase):
 
     def test_private_ipv4_shows_candidate_url(self):
         addresses = {
-            "lan": ["172.20.10.2"], "clat": [], "link_local": [],
+            "lan": ["172.20.10.2"], "shared": [], "clat": [], "link_local": [],
             "loopback": [], "other": [], "invalid": [],
         }
         r = sample_report(addresses=addresses, usable=["172.20.10.2"])
@@ -98,7 +131,7 @@ class NetworkDiagnosticsTests(unittest.TestCase):
 
     def test_link_local_only_explains_dhcp(self):
         addresses = {
-            "lan": [], "clat": [], "link_local": ["169.254.1.2"],
+            "lan": [], "shared": [], "clat": [], "link_local": ["169.254.1.2"],
             "loopback": [], "other": [], "invalid": [],
         }
         self.assertEqual(nd.diagnosis(sample_report(addresses=addresses))[0],
@@ -106,7 +139,7 @@ class NetworkDiagnosticsTests(unittest.TestCase):
 
     def test_public_ipv4_not_advertised(self):
         addresses = {
-            "lan": [], "clat": [], "link_local": [], "loopback": [],
+            "lan": [], "shared": [], "clat": [], "link_local": [], "loopback": [],
             "other": ["8.8.8.8"], "invalid": [],
         }
         r = sample_report(addresses=addresses)
