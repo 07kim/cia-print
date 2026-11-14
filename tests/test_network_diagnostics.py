@@ -102,7 +102,7 @@ class NetworkDiagnosticsTests(unittest.TestCase):
 
     def test_real_clat_diagnostic(self):
         addresses = {
-            "lan": [], "clat": ["192.0.0.2"], "link_local": [],
+            "lan": [], "shared": [], "clat": ["192.0.0.2"], "link_local": [],
             "loopback": [], "other": [], "invalid": [],
         }
         r = sample_report(addresses=addresses,
@@ -114,6 +114,14 @@ class NetworkDiagnosticsTests(unittest.TestCase):
         self.assertIn("CLAT", output)
         self.assertIn("iPad向けURLを表示できません", output)
         self.assertNotIn("http://192.0.0.2:8765/", output)
+
+    def test_legacy_report_without_shared_does_not_crash(self):
+        addresses = {
+            "lan": [], "clat": ["192.0.0.2"],
+            "link_local": [], "loopback": [], "other": [], "invalid": [],
+        }
+        report = sample_report(addresses=addresses)
+        self.assertIn("CLAT_IPV6_ONLY", nd.format_guidance(report, 8765))
 
     def test_private_ipv4_shows_candidate_url(self):
         addresses = {
