@@ -25,6 +25,14 @@ class NetworkDiagnosticsTests(unittest.TestCase):
     def test_classifies_typical_iphone_hotspot(self):
         self.assertEqual(nd.classify_ipv4("172.20.10.2"), "lan")
 
+    def test_iphone_hotspot_exact_observed_address(self):
+        self.assertEqual(nd.classify_ipv4("172.20.10.14"), "lan")
+
+    def test_all_private_lan_ranges(self):
+        for address in ("10.2.3.4", "172.20.10.14", "192.168.75.2"):
+            with self.subTest(address=address):
+                self.assertEqual(nd.classify_ipv4(address), "lan")
+
     def test_classifies_android_hotspot(self):
         self.assertEqual(nd.classify_ipv4("192.168.43.20"), "lan")
 
