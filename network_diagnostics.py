@@ -41,7 +41,7 @@ def parse_ifconfig(output: str) -> dict:
         header = re.match(r"^([a-zA-Z0-9_.-]+):\s+flags=", line)
         if header:
             current = header.group(1)
-            interfaces[current] = {"ipv4": [], "ipv6": [], "active": bool(re.search(r"<[^>]*\\bUP\\b[^>]*>", line))}
+            interfaces[current] = {"ipv4": [], "ipv6": [], "active": "UP" in line.split("<", 1)[-1].split(">", 1)[0].split(",")}
             continue
         if current is None:
             continue
