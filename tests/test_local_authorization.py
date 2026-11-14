@@ -41,6 +41,26 @@ class AdminEntryTests(unittest.TestCase):
             self.assertIsNone(local_server.unlock_destination("wrong"))
 
 
+
+class UnicodePasswordTests(unittest.TestCase):
+    def test_japanese_participant_password_unlocks_print(self):
+        with patch.dict(local_server.CONFIG, {"access_password": "いんさつ"}):
+            self.assertEqual(local_server.unlock_destination("いんさつ"), "print")
+
+    def test_wrong_japanese_password_is_rejected(self):
+        with patch.dict(local_server.CONFIG, {"access_password": "いんさつ"}):
+            self.assertIsNone(local_server.unlock_destination("いんさっ"))
+
+    def test_ascii_admin_password_still_unlocks_admin(self):
+        with patch.dict(local_server.CONFIG, {"access_password": "いんさつ"}):
+            self.assertEqual(local_server.unlock_destination("admin0000"), "admin")
+
+    def test_unicode_constant_comparison_returns_boolean(self):
+        self.assertTrue(local_server.constant_match("漢字とかな", "漢字とかな"))
+        self.assertFalse(local_server.constant_match("漢字とかな", "漢字とカナ"))
+
+
+
 class DocumentUploadTests(unittest.TestCase):
     def test_multipart_pdf_upload_works_without_cgi_module(self):
         boundary = "cia-print-test-boundary"

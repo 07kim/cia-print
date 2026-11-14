@@ -139,7 +139,8 @@ def consume_token(token: str, client_address: str) -> bool:
 
 
 def constant_match(value: str, expected: str) -> bool:
-    return hmac.compare_digest(str(value), str(expected))
+    # compare_digest accepts ASCII-only str; UTF-8 bytes support Japanese passwords.
+    return hmac.compare_digest(str(value).encode("utf-8"), str(expected).encode("utf-8"))
 
 
 def unlock_destination(password: str) -> str | None:
