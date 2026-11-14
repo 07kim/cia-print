@@ -438,11 +438,8 @@ def serve() -> None:
         if error.errno == errno.EADDRINUSE:
             print("\n ポートはすでに使用されています。CIA Printが起動中か確認してください。")
             print(" lsof -nP -iTCP:" + str(port) + " -sTCP:LISTEN")
-            addresses = local_ip_addresses()
-            for address in addresses:
-                print(f" 参加者画面  http://{address}:{port}/")
-                print(f" 管理画面    http://{address}:{port}/admin/")
-            print()
+            print(" CIA Printが正常稼働しているか、Macのブラウザで確認してください。")
+            print(f" http://127.0.0.1:{port}/api/status")
             return
         raise
     report = network_diagnostics.inspect_network()
