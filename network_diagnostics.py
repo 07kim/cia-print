@@ -171,8 +171,9 @@ def format_guidance(report: dict, port: int) -> str:
             " / gateway " + (report["gateway"] or "不明")
         )
     for kind in ("lan", "shared", "clat", "link_local", "other"):
-        if report["addresses"][kind]:
-            lines.append(" " + kind + ": " + ", ".join(report["addresses"][kind]))
+        values = report["addresses"].get(kind, [])
+        if values:
+            lines.append(" " + kind + ": " + ", ".join(values))
     if report["usable"]:
         lines.extend(
             f" 参加者画面  http://{address}:{port}/\n 管理画面    http://{address}:{port}/admin/"
