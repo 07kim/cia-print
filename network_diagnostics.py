@@ -18,6 +18,9 @@ LAN = (
     ipaddress.ip_network("192.168.0.0/16"),
 )
 LINK_LOCAL = ipaddress.ip_network("169.254.0.0/16")
+SHARED = ipaddress.ip_network("100.64.0.0/10")
+# Virtual and peer-to-peer links are not reliable destinations for an iPad.
+SKIP_INTERFACES = ("utun", "awdl", "llw", "lo", "gif", "stf", "anpi", "ap")
 
 
 def run_readonly(command: list[str]) -> str:
@@ -38,7 +41,7 @@ def parse_ifconfig(output: str) -> dict:
         header = re.match(r"^([a-zA-Z0-9_.-]+):\s+flags=", line)
         if header:
             current = header.group(1)
-            interfaces[current] = {"ipv4": [], "ipv6": []}
+            interfaces[current] = {"ipv4": [], "ipv6": [], "active": "UP" in line.split("<", 1)[-1].split(">", 1)[0].split(",")}
             continue
         if current is None:
             continue
@@ -62,6 +65,8 @@ def classify_ipv4(address: str) -> str:
         return "clat"
     if any(addr in network for network in LAN):
         return "lan"
+    if addr in SHARED:
+        return "shared"
     if addr in LINK_LOCAL:
         return "link_local"
     if addr.is_loopback or addr.is_unspecified:
@@ -74,7 +79,7 @@ def inspect_network() -> dict:
     addresses = set()
     ipv6_present = False
     for name, details in interfaces.items():
-        if name == "lo0":
+        if name == "lo0" or not details["active"] or name.startswith(SKIP_INTERFACES):
             continue
         addresses.update(details["ipv4"])
         ipv6_present |= bool(details["ipv6"])
@@ -104,14 +109,17 @@ def inspect_network() -> dict:
             route_interface = item.split(":", 1)[1].strip()
 
     grouped = {kind: [] for kind in (
-        "lan", "clat", "link_local", "loopback", "other", "invalid"
+        "lan", "shared", "clat", "link_local", "loopback", "other", "invalid"
     )}
     for address in sorted(addresses):
         grouped[classify_ipv4(address)].append(address)
+    # RFC6598 shared space is sometimes used for tethering. It is only a candidate,
+    # never a claim that an iPad can reach the Mac across the hotspot.
+    usable = grouped["lan"] + grouped["shared"]
     return {
         "interfaces": interfaces,
         "addresses": grouped,
-        "usable": grouped["lan"],
+        "usable": usable,
         "ipv6_present": ipv6_present,
         "gateway": gateway,
         "route_interface": route_interface,
@@ -125,6 +133,7 @@ def diagnosis(report: dict) -> tuple[str, list[str]]:
             "表示したURLは接続候補です。iPadとMacを同じネットワークに接続してください。",
             "iPadで開けない場合は端末間通信の制限・VPN・Macのファイアウォールを確認してください。",
             "MacのSafariで http://127.0.0.1:8765/ が開けるか確認してください。",
+            "100.64.x.x〜100.127.x.x は共有アドレスです。通信可否は必ずiPadから確認してください。",
         ]
     if types["clat"]:
         return "CLAT_IPV6_ONLY", [
@@ -161,7 +170,7 @@ def format_guidance(report: dict, port: int) -> str:
             (report["route_interface"] or "不明") +
             " / gateway " + (report["gateway"] or "不明")
         )
-    for kind in ("lan", "clat", "link_local", "other"):
+    for kind in ("lan", "shared", "clat", "link_local", "other"):
         if report["addresses"][kind]:
             lines.append(" " + kind + ": " + ", ".join(report["addresses"][kind]))
     if report["usable"]:
