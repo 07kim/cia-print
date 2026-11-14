@@ -33,13 +33,30 @@ const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolv
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 async function request(url, options = {}) {
-  const response = await fetch(url, {
-    cache: "no-store",
-    ...options,
-    headers: { "Content-Type": "application/json", ...options.headers },
-  });
+  let response;
+  try {
+    response = await fetch(url, {
+      cache: "no-store",
+      ...options,
+      headers: { "Content-Type": "application/json", ...options.headers },
+    });
+  } catch {
+    throw new Error("Macとの通信が切れました。MacでCIA Printが起動しているか、同じWi-Fi/テザリングに接続されているか確認してください。");
+  }
+
   const data = await response.json().catch(() => ({}));
-  if (!response.ok || data.ok === false) throw new Error(data.message || "通信できませんでした。もう一度お試しください。");
+  if (!response.ok || data.ok === false) {
+    if (response.status === 401) {
+      throw new Error(data.message || "認証できませんでした。パスワードまたは有効期限を確認してください。");
+    }
+    if (response.status === 429) {
+      throw new Error(data.message || "連続印刷の制限中です。少し時間をおいて再試行してください。");
+    }
+    if (response.status >= 500) {
+      throw new Error("Macのサーバーでエラーが発生しました。Macのターミナルに表示された内容を確認してください。");
+    }
+    throw new Error(data.message || "通信に失敗しました。接続状態を確認して再試行してください。");
+  }
   return data;
 }
 
@@ -242,10 +259,10 @@ ui.action.addEventListener("click", resetToHome);
 request("/api/status")
   .then((status) => {
     resetSeconds = Number(status.resetSeconds) || 7;
-    ui.connection.textContent = status.ready ? "Mac・プリンター接続準備完了" : "印刷資料が未設定";
+    ui.connection.textContent = status.ready ? "Macに接続済み・印刷資料あり" : "印刷資料が未設定";
     document.body.classList.toggle("is-offline", !status.ready);
   })
   .catch(() => {
-    ui.connection.textContent = "Macへ接続できません";
+    ui.connection.textContent = "Macへ接続できません。Wi-Fiとサーバーを確認";
     document.body.classList.add("is-offline");
   });
