@@ -26,7 +26,7 @@ function response() {
 
 {
   const res = response();
-  handler(request("PRINT"), res);
+  handler(request("いんさつ"), res);
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.ok, true);
   assert.equal(typeof res.body.token, "string");

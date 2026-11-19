@@ -75,6 +75,7 @@ function pressKeyboardKey(key) {
 }
 function openKeyboard() { ui.keyboard.hidden = false; updateKeyboard(); }
 function closeKeyboard() { ui.keyboard.hidden = true; }
+function normalizeAuthText(value) { return value.replace(/[ァ-ヶ]/g, (character) => String.fromCharCode(character.charCodeAt(0) - 0x60)); }
 
 async function request(url, options = {}) {
   let response;
@@ -230,7 +231,7 @@ ui.keyboardJa.addEventListener("click", () => { ui.password.value += romanBuffer
 ui.form.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (romanBuffer) { ui.password.value += romanBuffer; romanBuffer = ""; updateKeyboard(); }
-  const password = ui.password.value.trim();
+  const password = normalizeAuthText(ui.password.value).trim();
   if (!password) {
     ui.authMessage.textContent = "パスワードを入力してください。";
     return;
