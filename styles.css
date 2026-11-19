@@ -10,7 +10,6 @@
 @media(orientation:portrait),(max-width:620px){.stage{width:min(520px,88vw)}.hero-icon{font-size:64px}.auth-panel{grid-template-columns:1fr 64px}.auth-panel input,.auth-panel button{height:64px}.auth-panel button{width:64px}}
 @media(max-height:520px) and (orientation:landscape){.stage{gap:24px}.hero-icon{font-size:54px}.release-stage{gap:28px}.result-symbol{width:70px;height:70px;margin-bottom:18px}.result-symbol .material-symbols-rounded{font-size:36px}.result-card h1{font-size:36px}.send-progress{margin-top:20px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
-
 /* パスワード画面：画像と認証欄 */
 .lock-stage {
   width: min(1100px, 94vw);
@@ -61,3 +60,11 @@
     max-height: 35dvh;
   }
 }
+.puzzle-image{width:min(520px,82vw);max-height:30vh;object-fit:contain;border:1px solid #e2e3e5;background:#fff}
+.keyboard-popup{position:fixed;z-index:20;left:50%;bottom:18px;width:min(900px,calc(100vw - 28px));display:grid;gap:10px;padding:18px;border:1px solid #dadce0;border-radius:18px;background:#fff;box-shadow:0 18px 55px #20212440;transform:translateX(-50%)}
+.keyboard-header{display:flex;align-items:center;gap:12px;color:#202124}.keyboard-header>div{display:grid;gap:2px}.keyboard-header small{color:var(--red);font-size:12px;font-weight:700}.keyboard-header strong{font-size:21px}.keyboard-header>span{margin-left:auto;color:var(--red);font-size:14px;font-weight:700}.keyboard-close{width:40px;height:40px;border:1px solid #dadce0;border-radius:50%;background:#f1f3f4;color:#3c4043;font-size:24px;cursor:pointer}
+.keyboard-preview{height:66px;min-height:66px;display:grid;align-items:center;overflow:hidden;padding:10px 14px;border:2px solid #c7c9cc;border-radius:10px;background:#fff}.keyboard-preview strong{overflow-x:auto;white-space:nowrap;font-size:24px;letter-spacing:.08em}
+.keyboard-toggle{width:min(280px,100%);display:flex;margin:0 auto;padding:3px;border:1px solid #c7c9cc;border-radius:999px;background:#f1f3f4}.keyboard-toggle button{flex:1;min-height:40px;border:0;border-radius:999px;background:transparent;color:#5f6368;font-weight:700;cursor:pointer}.keyboard-toggle button.active{background:var(--red);color:#fff}
+.keyboard-row{display:flex;justify-content:center;gap:clamp(5px,.7vw,9px)}.keyboard-row button{flex:0 1 clamp(42px,6vw,66px);width:clamp(42px,6vw,66px);aspect-ratio:1;padding:8px 4px;border:1px solid #dadce0;border-radius:9px;background:#f8f9fa;color:#202124;font-weight:700;box-shadow:0 1px 0 #dadce0;cursor:pointer}.keyboard-row .active{border-color:var(--red);background:var(--red);color:#fff}.keyboard-row .keyboard-backspace{border-color:#f2b8be;background:#fff0f1;color:var(--red)}
+.keyboard-actions{display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:8px}.keyboard-actions button{min-height:46px;border:1px solid #dadce0;border-radius:9px;background:#f8f9fa;color:#202124;font-weight:700;cursor:pointer}.keyboard-actions .keyboard-confirm{border-color:var(--red);background:var(--red);color:#fff}
+@media(max-width:620px){.keyboard-popup{bottom:10px;padding:12px}.keyboard-row{gap:4px}.keyboard-row button{flex-basis:clamp(24px,8vw,42px);width:clamp(24px,8vw,42px);min-height:42px}.puzzle-image{max-height:24vh}}

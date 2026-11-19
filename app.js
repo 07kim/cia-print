@@ -5,6 +5,13 @@ const ui = {
   release: document.querySelector("#release-screen"),
   form: document.querySelector("#auth-form"),
   password: document.querySelector("#password"),
+  keyboard: document.querySelector("#keyboard-popup"),
+  keyboardPreview: document.querySelector("#keyboard-preview-value"),
+  keyboardModeLabel: document.querySelector("#keyboard-mode-label"),
+  keyboardEn: document.querySelector("#keyboard-en"), keyboardJa: document.querySelector("#keyboard-ja"),
+  keyboardClose: document.querySelector("#keyboard-close"), keyboardClear: document.querySelector("#keyboard-clear"),
+  keyboardSpace: document.querySelector("#keyboard-space"), keyboardConfirm: document.querySelector("#keyboard-confirm"),
+  keyboardTop: document.querySelector("#keyboard-row-top"), keyboardHome: document.querySelector("#keyboard-row-home"), keyboardBottom: document.querySelector("#keyboard-row-bottom"),
   authMessage: document.querySelector("#auth-message"),
   printButton: document.querySelector("#print-button"),
   resultLayer: document.querySelector("#result-layer"),
@@ -28,9 +35,46 @@ const AUTH_CHECK_MINIMUM_MS = 350;
 const CONNECTION_DISPLAY_MS = 200;
 const SENDING_DISPLAY_MS = 6000;
 const LOCK_IDLE_TIMEOUT_MS = 8000;
+let keyboardMode = "ja";
+let romanBuffer = "";
+let shiftActive = false;
+const ROMAJI = { kya:"キャ",kyi:"キィ",kyu:"キュ",kye:"キェ",kyo:"キョ",sha:"シャ",shu:"シュ",she:"シェ",sho:"ショ",sya:"シャ",syu:"シュ",syo:"ショ",ja:"ジャ",ju:"ジュ",je:"ジェ",jo:"ジョ",zya:"ジャ",zyu:"ジュ",zye:"ジェ",zyo:"ジョ",cha:"チャ",chu:"チュ",che:"チェ",cho:"チョ",nya:"ニャ",nyu:"ニュ",nye:"ニェ",nyo:"ニョ",hya:"ヒャ",hyu:"ヒュ",hye:"ヒェ",hyo:"ヒョ",mya:"ミャ",myu:"ミュ",mye:"ミェ",myo:"ミョ",rya:"リャ",ryu:"リュ",rye:"リェ",ryo:"リョ",gya:"ギャ",gyu:"ギュ",gye:"ギェ",gyo:"ギョ",bya:"ビャ",byu:"ビュ",byo:"ビョ",pya:"ピャ",pyu:"ピュ",pyo:"ピョ",tsu:"ツ",tsi:"ツィ",tsa:"ツァ",tse:"ツェ",tso:"ツォ",shi:"シ",chi:"チ",ti:"ティ",di:"ヂ",du:"ヅ",fu:"フ",hu:"フ",fa:"ファ",fi:"フィ",fe:"フェ",fo:"フォ",ji:"ジ",dzu:"ヅ",va:"ヴァ",vi:"ヴィ",vu:"ヴ",ve:"ヴェ",vo:"ヴォ",wi:"ウィ",we:"ウェ",ye:"イェ",xa:"ァ",xi:"ィ",xu:"ゥ",xe:"ェ",xo:"ォ",la:"ァ",li:"ィ",lu:"ゥ",le:"ェ",lo:"ォ",xya:"ャ",xyu:"ュ",xyo:"ョ",lya:"ャ",lyu:"ュ",lyo:"ョ",xtsu:"ッ",ltsu:"ッ",ltu:"ッ",xka:"ヵ",xke:"ヶ",lka:"ヵ",lke:"ヶ",a:"ア",i:"イ",u:"ウ",e:"エ",o:"オ",ka:"カ",ca:"カ",ki:"キ",ci:"シ",ku:"ク",cu:"ク",ke:"ケ",ce:"セ",ko:"コ",co:"コ",sa:"サ",si:"シ",su:"ス",se:"セ",so:"ソ",ta:"タ",te:"テ",to:"ト",tu:"ツ",na:"ナ",ni:"ニ",nu:"ヌ",ne:"ネ",no:"ノ",ha:"ハ",hi:"ヒ",he:"ヘ",ho:"ホ",ma:"マ",mi:"ミ",mu:"ム",me:"メ",mo:"モ",ya:"ヤ",yu:"ユ",yo:"ヨ",ra:"ラ",ri:"リ",ru:"ル",re:"レ",ro:"ロ",wa:"ワ",n:"ン",ga:"ガ",gi:"ギ",gu:"グ",ge:"ゲ",go:"ゴ",za:"ザ",zi:"ジ",zu:"ズ",ze:"ゼ",zo:"ゾ",da:"ダ",de:"デ",do:"ド",ba:"バ",bi:"ビ",bu:"ブ",be:"ベ",bo:"ボ",pa:"パ",pi:"ピ",pu:"プ",pe:"ペ",po:"ポ"};
+const ROMAJI_KEYS = Object.keys(ROMAJI).sort((a,b) => b.length-a.length);
+function consumeRomaji(buffer) { let rest = buffer.toLowerCase(), output = ""; while (rest) { if (rest === "n") break; if (rest.startsWith("nn")) { output += "ン"; rest = rest.slice(2); continue; } if (rest.length > 1 && rest[0] === rest[1] && /[bcdfghjklmpqrstvwxyz]/.test(rest[0])) { output += "ッ"; rest = rest.slice(1); continue; } const key = ROMAJI_KEYS.find((candidate) => rest.startsWith(candidate)); if (key) { output += ROMAJI[key]; rest = rest.slice(key.length); continue; } if (ROMAJI_KEYS.some((candidate) => candidate.startsWith(rest))) break; output += rest[0]; rest = rest.slice(1); } return { output, rest }; }
 
 const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+const keyboardRows = ["qwertyuiop", "asdfghjkl", "zxcvbnm@-ー"];
+function updateKeyboard() {
+  ui.keyboardPreview.textContent = ui.password.value || romanBuffer || "\u00a0";
+  ui.keyboardModeLabel.textContent = `現在: ${keyboardMode === "en" ? "英字" : "日本語"}`;
+  ui.keyboardEn.classList.toggle("active", keyboardMode === "en");
+  ui.keyboardJa.classList.toggle("active", keyboardMode === "ja");
+  ui.keyboardTop.innerHTML = ""; ui.keyboardHome.innerHTML = ""; ui.keyboardBottom.innerHTML = "";
+  [ui.keyboardTop, ui.keyboardHome].forEach((row, index) => {
+    [...keyboardRows[index]].forEach((key) => addKeyboardButton(row, key));
+  });
+  const shift = addKeyboardButton(ui.keyboardBottom, "shift"); shift.classList.toggle("active", shiftActive); shift.textContent = "⇧";
+  [...keyboardRows[2]].forEach((key) => addKeyboardButton(ui.keyboardBottom, key));
+  const backspace = addKeyboardButton(ui.keyboardTop, "backspace"); backspace.classList.add("keyboard-backspace"); backspace.textContent = "⌫";
+}
+function addKeyboardButton(row, key) {
+  const button = document.createElement("button"); button.type = "button"; button.dataset.key = key;
+  button.textContent = key === "ー" ? "ー" : key === "backspace" ? "⌫" : key === "shift" ? "⇧" : (shiftActive ? key.toUpperCase() : key);
+  if (key === "backspace") button.setAttribute("aria-label", "バックスペース");
+  button.addEventListener("click", () => pressKeyboardKey(key)); row.append(button); return button;
+}
+function pressKeyboardKey(key) {
+  if (key === "backspace") { if (keyboardMode === "ja" && romanBuffer) romanBuffer = romanBuffer.slice(0, -1); else ui.password.value = ui.password.value.slice(0, -1); updateKeyboard(); return; }
+  if (key === "shift") { shiftActive = !shiftActive; updateKeyboard(); return; }
+  if (key === "space" || key === "@" || key === "-" || key === "ー") { ui.password.value += `${romanBuffer}${key === "space" ? " " : key}`; romanBuffer = ""; updateKeyboard(); return; }
+  const typed = shiftActive ? key.toUpperCase() : key;
+  if (keyboardMode === "en") ui.password.value += typed;
+  else { const converted = consumeRomaji(`${romanBuffer}${typed.toLowerCase()}`); romanBuffer = converted.rest; ui.password.value += converted.output; }
+  updateKeyboard(); restartLockIdleTimer();
+}
+function openKeyboard() { ui.keyboard.hidden = false; updateKeyboard(); }
+function closeKeyboard() { ui.keyboard.hidden = true; }
 
 async function request(url, options = {}) {
   let response;
@@ -110,6 +154,9 @@ async function resetToHome() {
   window.clearTimeout(lockIdleTimer);
   token = "";
   ui.password.value = "";
+  romanBuffer = "";
+  shiftActive = false;
+  closeKeyboard();
   ui.authMessage.textContent = "";
   ui.authMessage.className = "form-message";
   ui.form.classList.remove("is-error");
@@ -172,9 +219,17 @@ function beginResetCountdown() {
 }
 
 ui.homeAction.addEventListener("click", openPasswordScreen);
+ui.password.addEventListener("click", openKeyboard);
+ui.keyboardClose.addEventListener("click", closeKeyboard);
+ui.keyboardConfirm.addEventListener("click", closeKeyboard);
+ui.keyboardClear.addEventListener("click", () => { ui.password.value = ""; romanBuffer = ""; updateKeyboard(); });
+ui.keyboardSpace.addEventListener("click", () => pressKeyboardKey("space"));
+ui.keyboardEn.addEventListener("click", () => { ui.password.value += romanBuffer; romanBuffer = ""; keyboardMode = "en"; updateKeyboard(); });
+ui.keyboardJa.addEventListener("click", () => { ui.password.value += romanBuffer; romanBuffer = ""; keyboardMode = "ja"; updateKeyboard(); });
 
 ui.form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (romanBuffer) { ui.password.value += romanBuffer; romanBuffer = ""; updateKeyboard(); }
   const password = ui.password.value.trim();
   if (!password) {
     ui.authMessage.textContent = "パスワードを入力してください。";

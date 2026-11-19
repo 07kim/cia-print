@@ -19,29 +19,32 @@
       </button>
     </section>
 
-
-<section class="stage lock-stage" id="lock-screen" hidden aria-label="パスワード認証">
-  <div class="lock-layout">
-    <div class="lock-image">
-      <img src="/assets/puzzle.png" alt="謎解き画像">
-    </div>
-
-    <div class="lock-content">
+    <section class="stage lock-stage" id="lock-screen" hidden aria-label="パスワード認証">
+      <div class="lock-layout">
+        <div class="lock-image"><img src="/assets/default-puzzle.png" alt="謎解き画像"></div>
+        <div class="lock-content">
       <span class="hero-icon lock-icon material-symbols-rounded" aria-hidden="true">lock</span>
       <p class="lock-notice" aria-live="polite">ロックがかかっています</p>
 
       <form class="auth-panel" id="auth-form">
         <label class="visually-hidden" for="password">パスワード</label>
-        <input id="password" name="password" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="auth-message" placeholder="パスワード">
-        <button type="submit" aria-label="認証する">
-          <span class="material-symbols-rounded" aria-hidden="true">check_circle</span>
-        </button>
+        <input id="password" name="password" type="text" inputmode="none" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="auth-message" readonly>
+        <button type="submit" aria-label="認証する"><span class="material-symbols-rounded" aria-hidden="true">check_circle</span></button>
         <p class="form-message" id="auth-message" aria-live="polite"></p>
         <div class="auth-progress" aria-hidden="true"><i></i></div>
       </form>
-    </div>
-  </div>
-</section>
+        </div>
+      </div>
+      <div class="keyboard-popup" id="keyboard-popup" hidden role="dialog" aria-label="管理機能認証">
+        <div class="keyboard-header"><div><small>管理機能認証</small><strong>システムパスワード</strong></div><span id="keyboard-mode-label">現在: 日本語</span><button id="keyboard-close" class="keyboard-close" type="button" aria-label="キーボードを閉じる">×</button></div>
+        <div class="keyboard-preview" aria-label="入力内容" aria-live="polite"><strong id="keyboard-preview-value">&nbsp;</strong></div>
+        <div class="keyboard-toggle" role="group" aria-label="入力モード"><button id="keyboard-en" type="button">英字</button><button id="keyboard-ja" class="active" type="button">日本語</button></div>
+        <div class="keyboard-row" id="keyboard-row-top"></div>
+        <div class="keyboard-row" id="keyboard-row-home"></div>
+        <div class="keyboard-row" id="keyboard-row-bottom"></div>
+        <div class="keyboard-actions"><button id="keyboard-clear" type="button">クリア</button><button id="keyboard-space" type="button">スペース</button><button id="keyboard-confirm" class="keyboard-confirm" type="button">決定</button></div>
+      </div>
+    </section>
     <section class="stage release-stage" id="release-screen" hidden aria-label="印刷">
       <span class="hero-icon success material-symbols-rounded" aria-hidden="true">description</span>
       <button class="print-button" id="print-button" type="button"><span class="material-symbols-rounded" aria-hidden="true">print</span><span>印刷</span></button>
