@@ -39,6 +39,12 @@ let keyboardMode = "ja";
 let romanBuffer = "";
 let shiftActive = false;
 const ROMAJI = { kya:"キャ",kyi:"キィ",kyu:"キュ",kye:"キェ",kyo:"キョ",sha:"シャ",shu:"シュ",she:"シェ",sho:"ショ",sya:"シャ",syu:"シュ",syo:"ショ",ja:"ジャ",ju:"ジュ",je:"ジェ",jo:"ジョ",zya:"ジャ",zyu:"ジュ",zye:"ジェ",zyo:"ジョ",cha:"チャ",chu:"チュ",che:"チェ",cho:"チョ",nya:"ニャ",nyu:"ニュ",nye:"ニェ",nyo:"ニョ",hya:"ヒャ",hyu:"ヒュ",hye:"ヒェ",hyo:"ヒョ",mya:"ミャ",myu:"ミュ",mye:"ミェ",myo:"ミョ",rya:"リャ",ryu:"リュ",rye:"リェ",ryo:"リョ",gya:"ギャ",gyu:"ギュ",gye:"ギェ",gyo:"ギョ",bya:"ビャ",byu:"ビュ",byo:"ビョ",pya:"ピャ",pyu:"ピュ",pyo:"ピョ",tsu:"ツ",tsi:"ツィ",tsa:"ツァ",tse:"ツェ",tso:"ツォ",shi:"シ",chi:"チ",ti:"ティ",di:"ヂ",du:"ヅ",fu:"フ",hu:"フ",fa:"ファ",fi:"フィ",fe:"フェ",fo:"フォ",ji:"ジ",dzu:"ヅ",va:"ヴァ",vi:"ヴィ",vu:"ヴ",ve:"ヴェ",vo:"ヴォ",wi:"ウィ",we:"ウェ",ye:"イェ",xa:"ァ",xi:"ィ",xu:"ゥ",xe:"ェ",xo:"ォ",la:"ァ",li:"ィ",lu:"ゥ",le:"ェ",lo:"ォ",xya:"ャ",xyu:"ュ",xyo:"ョ",lya:"ャ",lyu:"ュ",lyo:"ョ",xtsu:"ッ",ltsu:"ッ",ltu:"ッ",xka:"ヵ",xke:"ヶ",lka:"ヵ",lke:"ヶ",a:"ア",i:"イ",u:"ウ",e:"エ",o:"オ",ka:"カ",ca:"カ",ki:"キ",ci:"シ",ku:"ク",cu:"ク",ke:"ケ",ce:"セ",ko:"コ",co:"コ",sa:"サ",si:"シ",su:"ス",se:"セ",so:"ソ",ta:"タ",te:"テ",to:"ト",tu:"ツ",na:"ナ",ni:"ニ",nu:"ヌ",ne:"ネ",no:"ノ",ha:"ハ",hi:"ヒ",he:"ヘ",ho:"ホ",ma:"マ",mi:"ミ",mu:"ム",me:"メ",mo:"モ",ya:"ヤ",yu:"ユ",yo:"ヨ",ra:"ラ",ri:"リ",ru:"ル",re:"レ",ro:"ロ",wa:"ワ",n:"ン",ga:"ガ",gi:"ギ",gu:"グ",ge:"ゲ",go:"ゴ",za:"ザ",zi:"ジ",zu:"ズ",ze:"ゼ",zo:"ゾ",da:"ダ",de:"デ",do:"ド",ba:"バ",bi:"ビ",bu:"ブ",be:"ベ",bo:"ボ",pa:"パ",pi:"ピ",pu:"プ",pe:"ペ",po:"ポ"};
+Object.assign(ROMAJI, {
+  fya:"フィャ", fyu:"フュ", fyo:"フィョ", wo:"ヲ", xwa:"ヮ",
+  kwa:"クァ", kwi:"クィ", kwe:"クェ", kwo:"クォ", gwa:"グァ", gwi:"グィ", gwe:"グェ", gwo:"グォ",
+  tha:"テャ", thi:"ティ", thu:"テュ", the:"テェ", tho:"テョ", twa:"トァ", twi:"トィ", twe:"トェ", two:"トォ",
+  dya:"ヂャ", dyu:"ヂュ", dye:"ヂェ", dyo:"ヂョ", dha:"デャ", dhi:"ディ", dhu:"デュ", dhe:"デェ", dho:"デョ",
+});
 const ROMAJI_KEYS = Object.keys(ROMAJI).sort((a,b) => b.length-a.length);
 function consumeRomaji(buffer) { let rest = buffer.toLowerCase(), output = ""; while (rest) { if (rest === "n") break; if (rest.startsWith("nn")) { output += "ン"; rest = rest.slice(2); continue; } if (rest.length > 1 && rest[0] === rest[1] && /[bcdfghjklmpqrstvwxyz]/.test(rest[0])) { output += "ッ"; rest = rest.slice(1); continue; } const key = ROMAJI_KEYS.find((candidate) => rest.startsWith(candidate)); if (key) { output += ROMAJI[key]; rest = rest.slice(key.length); continue; } if (ROMAJI_KEYS.some((candidate) => candidate.startsWith(rest))) break; output += rest[0]; rest = rest.slice(1); } return { output, rest }; }
 
@@ -46,7 +52,7 @@ const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolv
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const keyboardRows = ["qwertyuiop", "asdfghjkl", "zxcvbnm@-ー"];
 function updateKeyboard() {
-  ui.keyboardPreview.textContent = ui.password.value || romanBuffer || "\u00a0";
+  ui.keyboardPreview.textContent = `${ui.password.value}${romanBuffer}` || "\u00a0";
   ui.keyboardModeLabel.textContent = `現在: ${keyboardMode === "en" ? "英字" : "日本語"}`;
   ui.keyboardEn.classList.toggle("active", keyboardMode === "en");
   ui.keyboardJa.classList.toggle("active", keyboardMode === "ja");
@@ -65,13 +71,14 @@ function addKeyboardButton(row, key) {
   button.addEventListener("click", () => pressKeyboardKey(key)); row.append(button); return button;
 }
 function pressKeyboardKey(key) {
+  restartLockIdleTimer();
   if (key === "backspace") { if (keyboardMode === "ja" && romanBuffer) romanBuffer = romanBuffer.slice(0, -1); else ui.password.value = ui.password.value.slice(0, -1); updateKeyboard(); return; }
   if (key === "shift") { shiftActive = !shiftActive; updateKeyboard(); return; }
   if (key === "space" || key === "@" || key === "-" || key === "ー") { ui.password.value += `${romanBuffer}${key === "space" ? " " : key}`; romanBuffer = ""; updateKeyboard(); return; }
   const typed = shiftActive ? key.toUpperCase() : key;
   if (keyboardMode === "en") ui.password.value += typed;
   else { const converted = consumeRomaji(`${romanBuffer}${typed.toLowerCase()}`); romanBuffer = converted.rest; ui.password.value += converted.output; }
-  updateKeyboard(); restartLockIdleTimer();
+  updateKeyboard();
 }
 function openKeyboard() { ui.keyboard.hidden = false; updateKeyboard(); }
 function closeKeyboard() { ui.keyboard.hidden = true; }
